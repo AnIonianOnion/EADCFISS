@@ -1,0 +1,24 @@
+{
+  "attack_damage.fire": "Fire Damage to Attacks",
+  "attack_damage.ice": "Ice Damage to Attacks",
+  "attack_damage.lightning": "Lightning Damage to Attacks",
+  "attack_damage.holy": "Holy Damage to Attacks",
+  "attack_damage.ender": "Ender Damage to Attacks",
+  "attack_damage.blood": "Blood Damage to Attacks",
+  "attack_damage.evocation": "Evocation Damage to Attacks",
+  "attack_damage.nature": "Nature Damage to Attacks",
+  "attack_damage.eldritch": "Eldritch Damage to Attacks",
+
+  "spell_damage.fire": "Fire Damage to Spells",
+  "spell_damage.ice": "Ice Damage to Spells",
+  "spell_damage.lightning": "Lightning Damage to Spells",
+  "spell_damage.holy": "Holy Damage to Spells",
+  "spell_damage.ender": "Ender Damage to Spells",
+  "spell_damage.blood": "Blood Damage to Spells",
+  "spell_damage.evocation": "Evocation Damage to Spells",
+  "spell_damage.nature": "Nature Damage to Spells",
+  "spell_damage.eldritch": "Eldritch Damage to Spells",
+
+  "spell.crit_chance": "Spell Critical Strike Chance",
+  "spell.crit_damage": "Critical Strike Multiplier for Spell Damage"
+}
