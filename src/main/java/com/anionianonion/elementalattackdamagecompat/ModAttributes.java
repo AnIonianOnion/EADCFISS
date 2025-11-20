@@ -47,32 +47,6 @@ public interface ModAttributes {
         return ForgeRegistries.ATTRIBUTES.getValue(attributeKey);
     }
 
-    //O (n^2)
-    static boolean isEquivalent(Collection<AttributeModifier> a, Collection<AttributeModifier> b, float factor) {
-
-        if(a.size() != b.size()) {
-            return false;
-        }
-
-        final double EPSILON = 0.0001; // Tolerance for floating-point comparison
-
-        for(var modA : a) {
-
-            boolean found = false;
-            for(var modB : b) {
-
-                if(modA.getOperation() == modB.getOperation() &&
-                        Math.abs(modA.getAmount() - modB.getAmount() * factor) < EPSILON) {
-                    found = true;
-                    break;
-                }
-            }
-            if(!found) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     static void register(IEventBus eventBus) {
         //RangedAttribute arguments: name, default value, min, max
