@@ -17,9 +17,6 @@ public interface ModAttributes {
     DeferredRegister<Attribute> ATTRIBUTES_REGISTRY = DeferredRegister.create(ForgeRegistries.ATTRIBUTES, ElementalAttackDamageCompatMod.MOD_ID);
     List<String> ELEMENTAL_ATTRIBUTE_NAMES = List.of("fire", "ice", "lightning", "holy", "ender", "blood", "evocation", "nature", "eldritch");
 
-    UUID GLOBAL_CRIT_CHANCE_UUID = UUID.fromString("d6c25898-7a2f-49cf-9cca-c523cb22823b");
-    UUID GLOBAL_CRIT_DAMAGE_UUID = UUID.fromString("d07454b9-f775-4d67-a635-e2e1632a3ec7");
-
     //based on https://www.youtube.com/watch?v=0gVO99YtaxE&t=5m48s&ab_channel=Kapitencraft
     //Changed -1 to null for more control, in case attribute values are negative.
     static Double getAttributeValue(LivingEntity le, Attribute a) {
