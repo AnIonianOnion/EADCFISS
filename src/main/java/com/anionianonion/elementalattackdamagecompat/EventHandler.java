@@ -1,6 +1,5 @@
 package com.anionianonion.elementalattackdamagecompat;
 
-import com.google.common.collect.Multimap;
 import io.redspace.ironsspellbooks.api.events.SpellDamageEvent;
 import io.redspace.ironsspellbooks.damage.SpellDamageSource;
 import net.minecraft.nbt.CompoundTag;
@@ -16,12 +15,9 @@ import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.ItemAttributeModifierEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.UUID;
 
 import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION;
@@ -162,19 +158,19 @@ public class EventHandler {
                 .toList();
         //
 
-        if (Config.applyCritAttributesGlobally) {
+        if (Config.applyAttackCritAttributesGlobally) {
             //if we have attack crit attributes that can be added
             if (!attackCritChanceModifiers.isEmpty() || !attackCritDamageModifiers.isEmpty()) {
                 //only add spell attributes if counts don't match (meaning we need to sync)
                 if (attackCritChanceModifiers.size() != spellCritChanceModifiers.size() || attackCritDamageModifiers.size() != spellCritDamageModifiers.size()) {
 
-                    CritHelpers.addStackingGlobalCritModifiers(itemStack, e.getSlotType(), attackCritChanceModifiers, attackCritDamageModifiers, spellCritChance, spellCritDamage);
+                    CritModifierHelpers.addStackingGlobalCritModifiers(itemStack, e.getSlotType(), attackCritChanceModifiers, attackCritDamageModifiers, spellCritChance, spellCritDamage);
                 }
             }
         } else {
             //if global cc/cd is disabled and item has spell cc/cd, remove them
             if (!spellCritChanceModifiers.isEmpty() || !spellCritDamageModifiers.isEmpty()) {
-                CritHelpers.removeGlobalCritModifiers(attributeModifiers,
+                CritModifierHelpers.removeGlobalCritModifiers(attributeModifiers,
                     spellCritChanceModifiers, spellCritDamageModifiers,
                     spellCritChance, spellCritDamage);
             }

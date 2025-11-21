@@ -53,10 +53,30 @@ public interface ModAttributes {
             ATTRIBUTES_REGISTRY.register(String.format("%s_spell_damage", elementName),
                     () -> new RangedAttribute(String.format("spell_damage.%s", elementName), 0, 0, Double.POSITIVE_INFINITY));
         }
+        ATTRIBUTES_REGISTRY.register("attack_crit_chance",
+                () -> new RangedAttribute("attack.crit_chance", 0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+        ATTRIBUTES_REGISTRY.register("attack_crit_damage",
+                () -> new RangedAttribute("attack.crit_damage", 1.5, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+
         ATTRIBUTES_REGISTRY.register("spell_crit_chance",
-                () -> new RangedAttribute("spell.crit_chance", 0.1, 0, Double.POSITIVE_INFINITY));
+                () -> new RangedAttribute("spell.crit_chance", 0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
         ATTRIBUTES_REGISTRY.register("spell_crit_damage",
-                () -> new RangedAttribute("spell.crit_damage", 1.5, 0, Double.POSITIVE_INFINITY));
+                () -> new RangedAttribute("spell.crit_damage", 1.5, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+
+        ATTRIBUTES_REGISTRY.register("global_crit_chance",
+                () -> new RangedAttribute("global.crit_chance", 0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+        ATTRIBUTES_REGISTRY.register("global_crit_damage",
+                () -> new RangedAttribute("global.crit_damage", 0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+
+        ATTRIBUTES_REGISTRY.register("elemental_damage",
+                () -> new RangedAttribute("multipliers.elemental_damage", 1, 0, Double.POSITIVE_INFINITY));
+        ATTRIBUTES_REGISTRY.register("spirit_damage",
+                () -> new RangedAttribute("multipliers.spirit_damage", 1, 0, Double.POSITIVE_INFINITY));
+
+        ATTRIBUTES_REGISTRY.register("spell_damage",
+                () -> new RangedAttribute("multipliers.spell_damage", 1, 0, Double.POSITIVE_INFINITY));
+        ATTRIBUTES_REGISTRY.register("attack_damage",
+                () -> new RangedAttribute("multipliers.attack_damage", 1, 0, Double.POSITIVE_INFINITY));
 
         ATTRIBUTES_REGISTRY.register(eventBus);
     }

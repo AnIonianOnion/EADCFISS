@@ -65,14 +65,15 @@ public class DamageManager {
         if(arrow.isCritArrow() && Config.disableVanillaFullyChargedBowCrit) {
             arrow.setCritArrow(false);
         }
-        Float critChance = ModAttributes.getAttributeValue(livingAttacker, Config.attackCritChanceAttributeId);
-        if(critChance == null) critChance = EventHandler.cc;
+        Float critChance, critDamage;
+        HashMap<String, Float> critData = getCritData(livingAttacker, false);
+        critChance = critData.get("crit_chance");
+
         float critRoll = (float) Math.random();
         if(critChance > critRoll) {
             arrow.setCritArrow(true);
         }
-        Float critDamage = ModAttributes.getAttributeValue(livingAttacker, Config.attackCritDamageAttributeId);
-        if(critDamage == null) critDamage = EventHandler.cd;
+        critDamage = critData.get("crit_damage");
 
         float postCritDamage = preCritDamage;
 
@@ -83,8 +84,8 @@ public class DamageManager {
     }
     public static float calculateMeleeCrit(LivingEntity livingAttacker, float preCritDamage) {
 
-        Float critDamage = ModAttributes.getAttributeValue(livingAttacker, Config.attackCritDamageAttributeId);
-        if(critDamage == null) critDamage = EventHandler.cd;
+        HashMap<String, Float> critData = getCritData(livingAttacker, false);
+        Float critDamage = critData.get("crit_damage");
 
         float postCritDamage;
         if(!livingAttacker.onGround() && livingAttacker.fallDistance > 0 && !Config.disableVanillaFallingCrit) {
@@ -269,13 +270,22 @@ public class DamageManager {
             critDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.spellCritDamageAttributeId);
             if(critDamage == null) critDamage = EventHandler.cd;
 
-            if(Config.applyCritAttributesGlobally) {
+            if(Config.applyAttackCritAttributesGlobally) {
                 Float secondaryCritChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritChanceAttributeId);
                 if(secondaryCritChance == null) secondaryCritChance = 0f;
                 Float secondaryCritDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritDamageAttributeId);
                 if(secondaryCritDamage == null) secondaryCritDamage = 0f;
 
-                critChance += secondaryCritChance;
+                critChance += secondaryCritChance + (float) Config.modCompatCritChanceOffset;
+                critDamage += secondaryCritDamage + (float) Config.modCompatCritDamageOffset;
+            }
+            else {
+                Float secondaryCritChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritChanceAttributeId);
+                if(secondaryCritChance == null) secondaryCritChance = 0f;
+                Float secondaryCritDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritDamageAttributeId);
+                if(secondaryCritDamage == null) secondaryCritDamage = 0f;
+
+                critChance += secondaryCritChance + (float) Config.modCompatCritChanceOffset;
                 critDamage += secondaryCritDamage + (float) Config.modCompatCritDamageOffset;
             }
         }
@@ -284,6 +294,16 @@ public class DamageManager {
             if(critChance == null) critChance = EventHandler.cc;
             critDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritDamageAttributeId);
             if(critDamage == null) critDamage = EventHandler.cd;
+
+            if(!Config.applyAttackCritAttributesGlobally) {
+                Float secondaryCritChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritChanceAttributeId);
+                if(secondaryCritChance == null) secondaryCritChance = 0f;
+                Float secondaryCritDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritDamageAttributeId);
+                if(secondaryCritDamage == null) secondaryCritDamage = 0f;
+
+                critChance += secondaryCritChance + (float) Config.modCompatCritChanceOffset;
+                critDamage += secondaryCritDamage + (float) Config.modCompatCritDamageOffset;
+            }
         }
 
 

@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 import java.util.UUID;
 
-public class CritHelpers {
+public class CritModifierHelpers {
 
 
     protected static void addStackingGlobalCritModifiers(ItemStack itemStack, EquipmentSlot slot,
