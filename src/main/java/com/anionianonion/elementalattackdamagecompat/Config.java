@@ -84,7 +84,7 @@ public class Config {
                             "\nif false: " +
                             "\n\ttotal *spell* crit chance will be the sum of global crit chance + spell crit chance + this value, and " +
                             "\n\ttotal *attack* crit chance will be the sum of global crit chance + attack crit chance + this value.")
-                    .defineInRange("modCompatCritDamageOffset", -0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+                    .defineInRange("modCompatCritChanceOffset", -0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
             MOD_COMPAT_CRIT_DAMAGE_OFFSET = BUILDER
                     .comment("if 'applyAttackCritAttributesGlobally' is true: total *spell* crit damage is the sum of the sum of attack crit damage + spell crit damage + this value." +
                             "\ntotal *attack* crit damage will be the sum of attack crit damage + this value." +
