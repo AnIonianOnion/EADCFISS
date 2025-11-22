@@ -3,7 +3,6 @@ package com.anionianonion.elementalattackdamagecompat;
 import io.redspace.ironsspellbooks.damage.SpellDamageSource;
 import io.redspace.ironsspellbooks.entity.spells.AbstractMagicProjectile;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -20,6 +19,7 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.anionianonion.elementalattackdamagecompat.EventHandler.PROCESSING_CUSTOM_DAMAGE;
 
@@ -90,19 +90,6 @@ public class DamageManager {
         return postCritDamage;
     }
 
-    public static boolean simpleCritRoll(LivingEntity livingAttackerOrCaster, boolean isSpell) {
-
-        Float critChance;
-        HashMap<String, Float> critData = getCritData(livingAttackerOrCaster, isSpell);
-        critChance = critData.get("crit_chance");
-
-        float critRoll = (float) Math.random();
-        if(critChance >= critRoll) {
-            return true;
-        }
-        return false;
-    }
-
     public static List<LivingEntity> getNearbyEnemies(Player player, LivingEntity attackedEntity) {
 
         //it is assumed in our EventHandler that we can sweep
@@ -158,16 +145,16 @@ public class DamageManager {
         }
     }
 
-    public static void manageArrowShot(LivingEntity livingAttacker, Arrow arrow, float baseTotalElementalDamage, LivingHurtEvent e) {
+    public static void manageArrowShot(LivingEntity livingAttacker, Arrow arrow,LivingHurtEvent e) {
         float minecraftArrowBaseDamage = (float) arrow.getBaseDamage();
-        float baseFlatDamage = minecraftArrowBaseDamage + baseTotalElementalDamage;
-        float flightSpeededAdjustedDamage = (float) (baseFlatDamage * arrow.getDeltaMovement().length()); //speed
+        float newBaseFlatDamage = sumOfDamages(getAllElementalData(livingAttacker, false, Map.entry("physical", minecraftArrowBaseDamage)));
+        float flightSpeededAdjustedDamage = (float) (newBaseFlatDamage * arrow.getDeltaMovement().length()); //speed
         float postCritAdjustedDamage = DamageManager.calculateCritArrow(arrow, livingAttacker, flightSpeededAdjustedDamage);
 
         int roundedDamage = Math.round(postCritAdjustedDamage);
         e.setAmount(roundedDamage);
     }
-    public static void manageMeleeAndOtherProjectiles(LivingEntity livingAttacker, Entity directEntity, DamageSource damageSource, float baseTotalElementalDamage, LivingHurtEvent e) {
+    public static void manageMeleeAndOtherProjectiles(LivingEntity livingAttacker, Entity directEntity, DamageSource damageSource, LivingHurtEvent e) {
         float baseDamage = e.getAmount();
 
         float expectedBaseDamage = (float) livingAttacker.getAttributeValue(Attributes.ATTACK_DAMAGE);
@@ -175,17 +162,15 @@ public class DamageManager {
 
         float newBaseFlatDamage;
         if(vanillaCritApplied) {
-            newBaseFlatDamage = (baseDamage / 1.5f) + baseTotalElementalDamage;
+            newBaseFlatDamage = sumOfDamages(getAllElementalData(livingAttacker, false, Map.entry("physical", baseDamage / 1.5f)));
         }
-        else newBaseFlatDamage = baseDamage + baseTotalElementalDamage;
+        else newBaseFlatDamage = sumOfDamages(getAllElementalData(livingAttacker, false, Map.entry("physical", baseDamage)));
 
-        ElementalAttackDamageCompatMod.LOGGER.info("" + baseDamage);
         LivingEntity attackedEntity = e.getEntity();
         //----MELEE---- ONLY FOR PLAYERS
         if(livingAttacker instanceof Player player && directEntity == player) {
 
             float critAdjustedDamage = DamageManager.calculateMeleeCrit(player, newBaseFlatDamage);
-            ElementalAttackDamageCompatMod.LOGGER.info("crit adj: " + critAdjustedDamage);
             ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
 
             if(itemStack.canPerformAction(ToolActions.SWORD_SWEEP)) {
@@ -327,17 +312,111 @@ public class DamageManager {
         }
     }
 
-    /*
-    public static float calculateIncreasesAndMoreMultipliers(LivingEntity livingAttacker, boolean isSpell) {
+    public static Float sumOfDamages(HashMap<String, Float> elementalData) {
+        Float sum = 0f;
+        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
+            sum += entry.getValue();
+        }
+        return sum;
+    }
 
-        if(isSpell) {
+    public static HashMap<String, Float> getAllElementalData(LivingEntity livingAttacker, boolean isSpell, Map.Entry<String, Float> otherDamage) {
 
+        HashMap<String, Float> result = new HashMap<>();
+
+        HashMap<String, Float> baseDamage = getBaseElementalDamagesData(livingAttacker, isSpell, otherDamage);
+        HashMap<String, Float> elementalIncreasesAndDecreases = getElementalIncreaesAndDecreasesData(livingAttacker, isSpell);
+        HashMap<String, Float> elementalMoreAndLessModifiers = getElementalMoreAndLessModifiersData(livingAttacker, isSpell);
+        //todo: resistances
+
+        result.putAll(baseDamage);
+        for(Map.Entry<String, Float> entry : elementalIncreasesAndDecreases.entrySet()) {
+            result.compute(entry.getKey(), (key, value) -> {
+                Float increaseOrDecreaseEffectiveMultiplier = elementalIncreasesAndDecreases.get(key);
+                return value * increaseOrDecreaseEffectiveMultiplier;
+            });
+        }
+
+        for(Map.Entry<String, Float> entry : elementalMoreAndLessModifiers.entrySet()) {
+            result.compute(entry.getKey(), (key, value) -> {
+                Float moreOrLessEffectiveMultiplier = elementalMoreAndLessModifiers.get(key);
+                return value * moreOrLessEffectiveMultiplier;
+            });
+        }
+
+        //todo: resistances
+        //todo: attack/spell increases/decreases
+        //todo: attack/spell more/less modifiers
+
+        return result;
+    }
+    public static HashMap<String, Float> getBaseElementalDamagesData(LivingEntity livingAttacker, boolean isSpell, Map.Entry<String, Float> otherDamage) {
+
+        HashMap<String, Float> baseElementalData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.ADDITION);
+        if(ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES.contains(otherDamage.getKey())) {
+            baseElementalData.put(
+                    otherDamage.getKey(),
+                    baseElementalData.get(otherDamage.getKey()) + otherDamage.getValue()
+            );
         }
         else {
-
+            baseElementalData.put(otherDamage.getKey(), otherDamage.getValue());
         }
-    }*/
+        return baseElementalData;
+    }
+    public static HashMap<String, Float> getElementalIncreaesAndDecreasesData(LivingEntity livingAttacker, boolean isSpell) {
+        return getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_BASE);
+    }
+    public static HashMap<String, Float> getElementalMoreAndLessModifiersData(LivingEntity livingAttacker, boolean isSpell) {
+        return getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_TOTAL);
+    }
+    private static List<AttributeModifier> filterElementalAttributeModifiersByOperation(LivingEntity livingAttacker, String elementalAttributeName, boolean isSpell, AttributeModifier.Operation operation) {
+        String spellOrAttack = isSpell ? "spell" : "attack";
+        Attribute elementalDamageAttribute = ModAttributes.getAttribute(String.format("%s:%s_%s_damage",
+                ElementalAttackDamageCompatMod.MOD_ID,
+                elementalAttributeName,
+                spellOrAttack
+        ));
 
+        if(elementalDamageAttribute != null && livingAttacker.getAttribute(elementalDamageAttribute) != null) {
+
+            return livingAttacker.getAttribute(elementalDamageAttribute).getModifiers()
+                    .stream()
+                    .filter(attribute -> attribute.getOperation() == operation)
+                    .toList();
+        }
+        return null;
+    }
+    private static HashMap<String, Float> getElementalDataForGivenOperation(LivingEntity livingAttacker, boolean isSpell, AttributeModifier.Operation operation) {
+
+        HashMap<String, Float> elementalData = new HashMap<>();
+
+        for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
+            List<AttributeModifier> addedDamageAttributeModifiersForElement = filterElementalAttributeModifiersByOperation(livingAttacker, elementalAttributeName, isSpell, operation);
+
+            if(addedDamageAttributeModifiersForElement != null) {
+
+                if(operation == AttributeModifier.Operation.ADDITION || operation == AttributeModifier.Operation.MULTIPLY_BASE) {
+                    float sum = operation == AttributeModifier.Operation.MULTIPLY_BASE ? 1 : 0;
+                    for (var attributeModifier : addedDamageAttributeModifiersForElement) {
+                        sum += (float) attributeModifier.getAmount();
+                    }
+                    elementalData.put(elementalAttributeName, sum);
+                }
+                else {
+                    float product = 1;
+                    for (var attributeModifier : addedDamageAttributeModifiersForElement) {
+                        product *= (float) (1 + attributeModifier.getAmount());
+                    }
+                    elementalData.put(elementalAttributeName, product);
+                }
+            }
+            else {
+                elementalData.put(elementalAttributeName, 0f);
+            }
+        }
+        return elementalData;
+    }
     public static HashMap<String, Float> getCritData(LivingEntity livingAttackerOrCaster, boolean isSpell) {
 
         HashMap<String, Float> critData = new HashMap<>();

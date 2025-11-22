@@ -45,18 +45,16 @@ public class EventHandler {
 
         LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
         var directEntity = damageSource.getDirectEntity();
-        float baseTotalElementalDamage = DamageManager.calculateBaseTotalElementalDamageFromAttacksPostElementalResistances(livingAttacker, e.getEntity());
-
         //attacker
             //melee & non-bow projectiles gets flat added damage (and 'increases', and 'more' multipliers), nothing else
             //bow gets added damage (and 'increases', and 'more' multipliers), multiplied by speed in blocks/s
         //----RANGED----: BOWS & CROSSBOWS SPECIFICALLY
         if(directEntity instanceof Arrow arrow) {
-            DamageManager.manageArrowShot(livingAttacker, arrow, baseTotalElementalDamage, e);
+            DamageManager.manageArrowShot(livingAttacker, arrow, e);
         }
         //---MELEE----     AND  ---RANGED---: OTHER PROJECTILES
         else if(livingAttacker == directEntity || directEntity instanceof AbstractArrow) {
-            DamageManager.manageMeleeAndOtherProjectiles(livingAttacker, directEntity, damageSource, baseTotalElementalDamage, e);
+            DamageManager.manageMeleeAndOtherProjectiles(livingAttacker, directEntity, damageSource, e);
         }
     }
 
