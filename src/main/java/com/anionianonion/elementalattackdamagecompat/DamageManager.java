@@ -269,7 +269,7 @@ public class DamageManager {
         Attribute spellOrAttackAttribute = ModAttributes.getAttribute(String.format("%s:%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, spellOrAttack));
 
         if(spellOrAttackAttribute != null && livingAttacker.getAttribute(spellOrAttackAttribute) != null) {
-            List<AttributeModifier> increaseOrDecreaseModifiers = livingAttacker.getAttribute(spellOrAttackAttribute).getModifiers()
+            List<AttributeModifier> increaseOrDecreaseSpellOrAttackModifiers = livingAttacker.getAttribute(spellOrAttackAttribute).getModifiers()
                     .stream()
                     .filter(attributeModifier -> attributeModifier.getOperation() == AttributeModifier.Operation.MULTIPLY_BASE)
                     .toList();
