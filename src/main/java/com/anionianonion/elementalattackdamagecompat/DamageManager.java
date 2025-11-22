@@ -15,6 +15,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.ToolActions;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.HashMap;
 import java.util.List;
@@ -107,7 +108,17 @@ public class DamageManager {
         float baseDamage = e.getAmount();
         LivingEntity livingDefender = e.getEntity();
 
-        float expectedBaseDamage = (float) livingAttacker.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        List<AttributeModifier> physAttackAddedDamageModifiers = livingAttacker.getAttribute(Attributes.ATTACK_DAMAGE).getModifiers()
+                .stream()
+                .filter(attributeModifier -> attributeModifier.getOperation() == AttributeModifier.Operation.ADDITION)
+                .toList();
+
+        float baseAttackDamage = (float) livingAttacker.getAttribute(Attributes.ATTACK_DAMAGE).getBaseValue();
+        for(AttributeModifier attributeModifier: physAttackAddedDamageModifiers) {
+            baseAttackDamage += (float) attributeModifier.getAmount();
+        }
+
+        float expectedBaseDamage = baseAttackDamage;
         boolean vanillaCritApplied = baseDamage > expectedBaseDamage;
 
         float substitute = baseDamage;
@@ -208,11 +219,32 @@ public class DamageManager {
     }
     public static HashMap<String, Float> getAllElementalData(LivingEntity livingAttacker, LivingEntity livingDefender, boolean isSpell, Map.Entry<String, Float> otherDamage) {
 
-        HashMap<String, Float> result = new HashMap<>();
+        float increasedPhysMultiplier = 1;
+        float morePhysMultiplier = 1;
 
+        List<AttributeModifier> increaseOrDecreasePhysModifiers = livingAttacker.getAttribute(Attributes.ATTACK_DAMAGE).getModifiers()
+                .stream()
+                .filter(attributeModifier -> attributeModifier.getOperation() == AttributeModifier.Operation.MULTIPLY_BASE)
+                .toList();
+
+        for (AttributeModifier increaseOrDecreasePhysModifier : increaseOrDecreasePhysModifiers) {
+            increasedPhysMultiplier += (float) increaseOrDecreasePhysModifier.getAmount();
+        }
+
+        List<AttributeModifier> moreOrLessPhysModifiers = livingAttacker.getAttribute(Attributes.ATTACK_DAMAGE).getModifiers()
+                .stream()
+                .filter(attributeModifier -> attributeModifier.getOperation() == AttributeModifier.Operation.MULTIPLY_BASE)
+                .toList();
+
+        for (AttributeModifier moreOrLessPhysModifier : moreOrLessPhysModifiers) {
+            morePhysMultiplier *= (float) (1 + moreOrLessPhysModifier.getAmount());
+        }
+
+
+        HashMap<String, Float> result = new HashMap<>();
         HashMap<String, Float> baseDamage = getBaseElementalDamagesData(livingAttacker, isSpell, otherDamage);
-        HashMap<String, Float> elementalIncreasesAndDecreases = getElementalIncreasesAndDecreasesData(livingAttacker, isSpell);
-        HashMap<String, Float> elementalMoreAndLessModifiers = getElementalMoreAndLessModifiersData(livingAttacker, isSpell);
+        HashMap<String, Float> elementalIncreasesAndDecreases = getElementalIncreasesAndDecreasesData(livingAttacker, isSpell, Map.entry(otherDamage.getKey(), increasedPhysMultiplier));
+        HashMap<String, Float> elementalMoreAndLessModifiers = getElementalMoreAndLessModifiersData(livingAttacker, isSpell, Map.entry(otherDamage.getKey(), morePhysMultiplier));
         HashMap<String, Float> enemyElementalResistances = getElementalResistances(livingDefender);
 
         result.putAll(baseDamage);
@@ -279,6 +311,11 @@ public class DamageManager {
                 sum += (float) increaseOrDecreaseSpellOrAttackModifier.getAmount();
             }
 
+            //expecting physical damage, which isn't part of ISS but vanilla MC
+            if(!elementalIncreasesAndDecreasesData.containsKey(otherDamage.getKey())) {
+                elementalIncreasesAndDecreasesData.put(otherDamage.getKey(), otherDamage.getValue()); //do not add sum to otherDamage.getValue() here. otherwise, sum will be added twice.
+            }
+
             for(Map.Entry<String, Float> entry : elementalIncreasesAndDecreasesData.entrySet()) {
                 elementalIncreasesAndDecreasesData.put(entry.getKey(), entry.getValue() + sum);
             }
@@ -286,8 +323,8 @@ public class DamageManager {
 
         return elementalIncreasesAndDecreasesData;
     }
-    public static HashMap<String, Float> getElementalMoreAndLessModifiersData(LivingEntity livingAttacker, boolean isSpell) {
-        HashMap<String, Float> elementalMoreAndLessModifiers = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_TOTAL);
+    public static HashMap<String, Float> getElementalMoreAndLessModifiersData(LivingEntity livingAttacker, boolean isSpell, Map.Entry<String, Float> otherDamage) {
+        HashMap<String, Float> elementalMoreAndLessModifiersData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_TOTAL);
         String spellOrAttack = isSpell ? "spell" : "attack";
         Attribute spellOrAttackAttribute = ModAttributes.getAttribute(String.format("%s:%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, spellOrAttack));
 
@@ -298,16 +335,21 @@ public class DamageManager {
                     .toList();
 
             float product = 1;
-            for(AttributeModifier moreOrLessModifier : moreOrLessSpellOrAttackModifiers) {
-                product *= (float) (1 + moreOrLessModifier.getAmount());
+            for(AttributeModifier moreOrLessSpellOrAttackModifier : moreOrLessSpellOrAttackModifiers) {
+                product *= (float) (1 + moreOrLessSpellOrAttackModifier.getAmount());
             }
 
-            for(Map.Entry<String, Float> entry : elementalMoreAndLessModifiers .entrySet()) {
-                elementalMoreAndLessModifiers .put(entry.getKey(), entry.getValue() * product);
+            //expecting physical damage, which isn't part of ISS but vanilla MC
+            if(!elementalMoreAndLessModifiersData.containsKey(otherDamage.getKey())) {
+                elementalMoreAndLessModifiersData.put(otherDamage.getKey(), otherDamage.getValue()); //do not add sum to otherDamage.getValue() here. otherwise, sum will be added twice.
+            }
+
+            for(Map.Entry<String, Float> entry : elementalMoreAndLessModifiersData .entrySet()) {
+                elementalMoreAndLessModifiersData .put(entry.getKey(), entry.getValue() * product);
             }
         }
 
-        return elementalMoreAndLessModifiers;
+        return elementalMoreAndLessModifiersData;
     }
     private static HashMap<String, Float> getElementalResistances(LivingEntity livingDefender) {
         HashMap<String, Float> elementalResistanceData = new HashMap<>();
@@ -323,7 +365,7 @@ public class DamageManager {
         return elementalResistanceData;
     }
 
-    private static List<AttributeModifier> filterElementalAttributeModifiersByOperation(LivingEntity livingAttacker, String elementalAttributeName, boolean isSpell, AttributeModifier.Operation operation) {
+    private static List<AttributeModifier> filterSpecificElementalAttributeModifiersByOperation(LivingEntity livingAttacker, String elementalAttributeName, boolean isSpell, AttributeModifier.Operation operation) {
         String spellOrAttack = isSpell ? "spell" : "attack";
         Attribute elementalDamageAttribute = ModAttributes.getAttribute(String.format("%s:%s_%s_damage",
                 ElementalAttackDamageCompatMod.MOD_ID,
@@ -340,12 +382,14 @@ public class DamageManager {
         }
         return null;
     }
+
+    //depending on operation: gets hashmap detailing base added damage, increased/decreased damage, or more/less damage.
     private static HashMap<String, Float> getElementalDataForGivenOperation(LivingEntity livingAttacker, boolean isSpell, AttributeModifier.Operation operation) {
 
         HashMap<String, Float> elementalData = new HashMap<>();
 
         for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
-            List<AttributeModifier> addedDamageAttributeModifiersForElement = filterElementalAttributeModifiersByOperation(livingAttacker, elementalAttributeName, isSpell, operation);
+            List<AttributeModifier> addedDamageAttributeModifiersForElement = filterSpecificElementalAttributeModifiersByOperation(livingAttacker, elementalAttributeName, isSpell, operation);
 
             if(addedDamageAttributeModifiersForElement != null) {
 
