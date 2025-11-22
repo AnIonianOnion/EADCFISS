@@ -275,8 +275,8 @@ public class DamageManager {
                     .toList();
 
             float sum = 0;
-            for(AttributeModifier increaseOrDecreaseModifier : increaseOrDecreaseModifiers) {
-                sum += (float) increaseOrDecreaseModifier.getAmount();
+            for(AttributeModifier increaseOrDecreaseSpellOrAttackModifier : increaseOrDecreaseSpellOrAttackModifiers) {
+                sum += (float) increaseOrDecreaseSpellOrAttackModifier.getAmount();
             }
 
             for(Map.Entry<String, Float> entry : elementalIncreasesAndDecreasesData.entrySet()) {
