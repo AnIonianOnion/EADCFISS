@@ -1,6 +1,5 @@
 package com.anionianonion.elementalattackdamagecompat;
 
-import io.redspace.ironsspellbooks.damage.SpellDamageSource;
 import io.redspace.ironsspellbooks.entity.spells.AbstractMagicProjectile;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.damagesource.DamageSource;
@@ -39,6 +38,117 @@ public class DamageManager {
         var directEntity = damageSource.getDirectEntity();
         return directEntity instanceof AbstractMagicProjectile; //simplified from an if statement, because it is the last check, and we can directly return the value as a result.
     }
+    public static List<LivingEntity> getNearbyEnemies(Player player, LivingEntity attackedEntity) {
+
+        //it is assumed in our EventHandler that we can sweep
+        ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
+
+        AABB sweepingEdgeHitbox = itemStack.getSweepHitBox(player, attackedEntity);
+        Level level = player.level();
+        List<LivingEntity> entitiesWithinHitbox = level.getEntitiesOfClass(LivingEntity.class, sweepingEdgeHitbox);
+        var enemies = entitiesWithinHitbox.stream()
+                .filter(entity -> entity != player)
+                .filter(entity -> entity != attackedEntity)
+                .filter(entity -> !entity.isAlliedTo(player))
+                .filter(entity -> entity.distanceToSqr(player) < 9.0)
+                //todo: also filter enemies that can't be hurt
+                .toList();
+
+        return enemies;
+
+    }
+    public static int getSweepingLevelOfPlayerWeapon(Player player) {
+        int sweepingLevel = 0;
+        ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
+        if(itemStack.hasTag() && itemStack.getTag().contains("Enchantments")) {
+
+            ListTag enchantments = itemStack.getTag().getList("Enchantments", ListTag.TAG_COMPOUND);
+
+            for(int i = 0; i < enchantments.size(); i++) {
+
+                var enchantment = enchantments.getCompound(i);
+                var enchantmentName = enchantment.getString("Name");
+
+                if(enchantmentName.equals("Sweeping Edge")) {
+                    sweepingLevel = enchantment.getInt("Lvl");
+                    break;
+                }
+            }
+        }
+        return sweepingLevel;
+    }
+    public static void performSweepingAttack(int sweepingLevel, float critAdjustedDamage, DamageSource damageSource, List<LivingEntity> nearbyEnemies, LivingHurtEvent e) {
+        e.setAmount(Math.round(critAdjustedDamage)); //main target
+
+        //MC Sweeping Edge Damage formula
+        float sweepingDamage = 1 + critAdjustedDamage * ((float) sweepingLevel / (sweepingLevel + 1));
+        int roundedSweepingDamage = Math.round(sweepingDamage);
+
+        try {
+            PROCESSING_CUSTOM_DAMAGE.set(true);
+            //attackedEntity.hurt(damageSource, roundedTotalDamage);
+            nearbyEnemies.forEach(entity -> entity.hurt(damageSource, roundedSweepingDamage));
+        } finally {
+            PROCESSING_CUSTOM_DAMAGE.set(false);
+        }
+    }
+
+    public static void manageArrowShot(LivingEntity livingAttacker, Arrow arrow,LivingHurtEvent e) {
+        LivingEntity livingDefender = e.getEntity();
+        float minecraftArrowBaseDamage = (float) arrow.getBaseDamage();
+        float newBaseFlatDamage = sumOfDamages(getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", minecraftArrowBaseDamage)));
+        float flightSpeededAdjustedDamage = (float) (newBaseFlatDamage * arrow.getDeltaMovement().length()); //speed
+        float postCritAdjustedDamage = DamageManager.calculateCritArrow(arrow, livingAttacker, flightSpeededAdjustedDamage);
+
+        int roundedDamage = Math.round(postCritAdjustedDamage);
+        e.setAmount(roundedDamage);
+    }
+    public static void manageMeleeAndOtherProjectiles(LivingEntity livingAttacker, Entity directEntity, DamageSource damageSource, LivingHurtEvent e) {
+        float baseDamage = e.getAmount();
+        LivingEntity livingDefender = e.getEntity();
+
+        float expectedBaseDamage = (float) livingAttacker.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        boolean vanillaCritApplied = baseDamage > expectedBaseDamage;
+
+        float substitute = baseDamage;
+        if(vanillaCritApplied) substitute = baseDamage / 1.5f;
+
+        float newBaseFlatDamage = sumOfDamages(getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", substitute)));
+
+
+        //----MELEE---- ONLY FOR PLAYERS
+        if(livingAttacker instanceof Player player && directEntity == player) {
+
+            float critAdjustedDamage = DamageManager.calculateMeleeCrit(player, newBaseFlatDamage);
+            ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
+
+            if(itemStack.canPerformAction(ToolActions.SWORD_SWEEP)) {
+                List<LivingEntity> nearbyEnemies = DamageManager.getNearbyEnemies(player, livingDefender);
+                int sweepingLevel = DamageManager.getSweepingLevelOfPlayerWeapon(player);
+                performSweepingAttack(sweepingLevel, critAdjustedDamage, damageSource, nearbyEnemies, e);
+            }
+            else {
+                int roundedDamage = Math.round(critAdjustedDamage);
+                e.setAmount(roundedDamage);
+            }
+        }
+        //---RANGED---: OTHER PROJECTILES (PLAYERS AND NON-PLAYERS)
+        //and ---MELEE---(NON-PLAYERS)
+        else {
+            float critAdjustedDamage;
+            //MELEE (NON-PLAYERS)
+            if(directEntity == livingAttacker) {
+                critAdjustedDamage = DamageManager.calculateMeleeCrit(livingAttacker, newBaseFlatDamage);
+            }
+            //RANGED: OTHER PROJECTILES
+            else {
+                critAdjustedDamage = DamageManager.simpleCritRoll(livingAttacker, false, newBaseFlatDamage);
+            }
+            int roundedDamage = Math.round(critAdjustedDamage);
+            e.setAmount(roundedDamage);
+        }
+    }
+
     public static float calculateCritArrow(Arrow arrow, LivingEntity livingAttacker, float preCritDamage) {
         //vanilla MC assumes that a fully charged bow or crossbow will automatically crit.
         if(arrow.isCritArrow() && Config.disableVanillaFullyChargedBowCrit) {
@@ -89,247 +199,33 @@ public class DamageManager {
         }
         return postCritDamage;
     }
-
-    public static List<LivingEntity> getNearbyEnemies(Player player, LivingEntity attackedEntity) {
-
-        //it is assumed in our EventHandler that we can sweep
-        ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
-
-        AABB sweepingEdgeHitbox = itemStack.getSweepHitBox(player, attackedEntity);
-        Level level = player.level();
-        List<LivingEntity> entitiesWithinHitbox = level.getEntitiesOfClass(LivingEntity.class, sweepingEdgeHitbox);
-        var enemies = entitiesWithinHitbox.stream()
-                .filter(entity -> entity != player)
-                .filter(entity -> entity != attackedEntity)
-                .filter(entity -> !entity.isAlliedTo(player))
-                .filter(entity -> entity.distanceToSqr(player) < 9.0)
-                //todo: also filter enemies that can't be hurt
-                .toList();
-
-        return enemies;
-
-    }
-    public static int getSweepingLevelOfPlayerWeapon(Player player) {
-        int sweepingLevel = 0;
-        ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
-        if(itemStack.hasTag() && itemStack.getTag().contains("Enchantments")) {
-
-            ListTag enchantments = itemStack.getTag().getList("Enchantments", ListTag.TAG_COMPOUND);
-
-            for(int i = 0; i < enchantments.size(); i++) {
-
-                var enchantment = enchantments.getCompound(i);
-                var enchantmentName = enchantment.getString("Name");
-
-                if(enchantmentName.equals("Sweeping Edge")) {
-                    sweepingLevel = enchantment.getInt("Lvl");
-                    break;
-                }
-            }
-        }
-        return sweepingLevel;
-    }
-    public static void performSweepingAttack(int sweepingLevel, float critAdjustedDamage, LivingEntity attackedEntity, DamageSource damageSource, List<LivingEntity> nearbyEnemies, LivingHurtEvent e) {
-        e.setAmount(Math.round(critAdjustedDamage)); //main target
-
-        //MC Sweeping Edge Damage formula
-        float sweepingDamage = 1 + critAdjustedDamage * ((float) sweepingLevel / (sweepingLevel + 1));
-        int roundedSweepingDamage = Math.round(sweepingDamage);
-
-        try {
-            PROCESSING_CUSTOM_DAMAGE.set(true);
-            //attackedEntity.hurt(damageSource, roundedTotalDamage);
-            nearbyEnemies.forEach(entity -> entity.hurt(damageSource, roundedSweepingDamage));
-        } finally {
-            PROCESSING_CUSTOM_DAMAGE.set(false);
-        }
-    }
-
-    public static void manageArrowShot(LivingEntity livingAttacker, Arrow arrow,LivingHurtEvent e) {
-        float minecraftArrowBaseDamage = (float) arrow.getBaseDamage();
-        float newBaseFlatDamage = sumOfDamages(getAllElementalData(livingAttacker, false, Map.entry("physical", minecraftArrowBaseDamage)));
-        float flightSpeededAdjustedDamage = (float) (newBaseFlatDamage * arrow.getDeltaMovement().length()); //speed
-        float postCritAdjustedDamage = DamageManager.calculateCritArrow(arrow, livingAttacker, flightSpeededAdjustedDamage);
-
-        int roundedDamage = Math.round(postCritAdjustedDamage);
-        e.setAmount(roundedDamage);
-    }
-    public static void manageMeleeAndOtherProjectiles(LivingEntity livingAttacker, Entity directEntity, DamageSource damageSource, LivingHurtEvent e) {
-        float baseDamage = e.getAmount();
-
-        float expectedBaseDamage = (float) livingAttacker.getAttributeValue(Attributes.ATTACK_DAMAGE);
-        boolean vanillaCritApplied = baseDamage > expectedBaseDamage;
-
-        float newBaseFlatDamage;
-        if(vanillaCritApplied) {
-            newBaseFlatDamage = sumOfDamages(getAllElementalData(livingAttacker, false, Map.entry("physical", baseDamage / 1.5f)));
-        }
-        else newBaseFlatDamage = sumOfDamages(getAllElementalData(livingAttacker, false, Map.entry("physical", baseDamage)));
-
-        LivingEntity attackedEntity = e.getEntity();
-        //----MELEE---- ONLY FOR PLAYERS
-        if(livingAttacker instanceof Player player && directEntity == player) {
-
-            float critAdjustedDamage = DamageManager.calculateMeleeCrit(player, newBaseFlatDamage);
-            ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
-
-            if(itemStack.canPerformAction(ToolActions.SWORD_SWEEP)) {
-                List<LivingEntity> nearbyEnemies = DamageManager.getNearbyEnemies(player, attackedEntity);
-                int sweepingLevel = DamageManager.getSweepingLevelOfPlayerWeapon(player);
-                performSweepingAttack(sweepingLevel, critAdjustedDamage, attackedEntity, damageSource, nearbyEnemies, e);
-            }
-            else {
-                int roundedDamage = Math.round(critAdjustedDamage);
-                e.setAmount(roundedDamage);
-            }
-        }
-        //---RANGED---: OTHER PROJECTILES (PLAYERS AND NON-PLAYERS)
-        //and ---MELEE---(NON-PLAYERS)
-        else {
-            float critAdjustedDamage;
-            //MELEE (NON-PLAYERS)
-            if(directEntity == livingAttacker) {
-                critAdjustedDamage = DamageManager.calculateMeleeCrit(livingAttacker, newBaseFlatDamage);
-            }
-            //RANGED: OTHER PROJECTILES
-            else {
-                critAdjustedDamage = DamageManager.simpleCritRoll(livingAttacker, false, newBaseFlatDamage);
-            }
-            int roundedDamage = Math.round(critAdjustedDamage);
-            e.setAmount(roundedDamage);
-        }
-    }
-
-    public static float calculateBaseTotalElementalDamageFromAttacksPostElementalResistances(LivingEntity livingAttacker, LivingEntity livingDefender) {
-
-        var totalElementalDamage = 0f;
-        //accumulator for post-resistance damage
-        for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
-            Float elementalDamage = ModAttributes.getAttributeValue(
-                    livingAttacker,
-                    String.format("%s:%s_attack_damage",
-                            ElementalAttackDamageCompatMod.MOD_ID,
-                            elementalAttributeName)
-            );
-            //expected: elementalDamage is -1 if damageDealer is not a player.
-            if(elementalDamage != null) {
-                Float enemyElementalResistance = ModAttributes.getAttributeValue(
-                        livingDefender,
-                        String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName)
-                );
-                if(enemyElementalResistance == null) {
-                    enemyElementalResistance = 1f; //by default, what elemental resistances are.
-                }
-                elementalDamage *= (2 - enemyElementalResistance);
-                totalElementalDamage += elementalDamage;
-            }
-        }
-
-        return totalElementalDamage;
-    }
-    public static float calculateBaseTotalElementalDamageFromSpellsPostElementalResistances(SpellDamageSource spellDamageSource, LivingEntity livingDefender, float originalTotalDamage) {
-
-        var spellSchool = spellDamageSource.spell().getSchoolType().getId().getPath();
-        var caster = (LivingEntity) spellDamageSource.get().getEntity();
-        var totalElementalDamage = 0f;
-
-        for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
-            Float elementalDamage = ModAttributes.getAttributeValue(
-                    caster,
-                    String.format("%s:%s_spell_damage",
-                            ElementalAttackDamageCompatMod.MOD_ID,
-                            elementalAttributeName)
-            );
-            if(elementalDamage != null) {
-
-                //the original spell does not have an elemental damage from our mod by default, so we get it based on school
-                if(spellSchool.equals(elementalAttributeName)) {
-                    //if the spell's school is found, we classify it as the corresponding elemental damage from our mod.
-                    // So with the original damage, we remove it, and add it to ours instead.
-
-                    //don't know if spell power is calculated into spell's original damage by default.
-                    //if it isn't, then originalDamage = originalDamgage * spellPower. //results showed it does not scale linearly
-
-                    //bc elementalDamage isn't null, we can assume our attribute isn't null.
-                    Attribute elementalDamageAttribute = ModAttributes.getAttribute(String.format("%s:%s_spell_damage",
-                            ElementalAttackDamageCompatMod.MOD_ID,
-                            elementalAttributeName));
-
-                    //even if elementalDamage != null, check if caster has the attribute
-                    if(caster.getAttribute(elementalDamageAttribute) != null)
-                    {
-                        var all = caster.getAttribute(elementalDamageAttribute).getModifiers();
-                        var increasesOrDecreases = all
-                                .stream()
-                                .filter(modifier -> modifier.getOperation() == AttributeModifier.Operation.MULTIPLY_BASE)
-                                .toList();
-                        var moreOrLessMods = all
-                                .stream()
-                                .filter(modifier -> modifier.getOperation() == AttributeModifier.Operation.MULTIPLY_TOTAL)
-                                .toList();
-
-                        float totalIncrease = 0;
-                        for(var modifier : increasesOrDecreases) {
-                            totalIncrease += (float) modifier.getAmount();
-                        }
-
-                        float productMore = 1;
-                        for(var modifier : moreOrLessMods) {
-                            productMore *= (float) modifier.getAmount();
-                        }
-
-                        originalTotalDamage = originalTotalDamage * (1 + totalIncrease) * productMore;
-                    }
-
-                    elementalDamage += originalTotalDamage;
-                    originalTotalDamage -= originalTotalDamage; //aka 0
-                }
-
-                //Enemy resistances
-                Float enemyElementalResistance = ModAttributes.getAttributeValue(
-                        livingDefender,
-                        String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName)
-                );
-                if(enemyElementalResistance == null) {
-                    enemyElementalResistance = 1f; //by default, what elemental resistances are.
-                }
-
-                //todo: don't know if spell power is calculated into spell's original damage by default.
-                //if it isn't, then originalDamage = originalDamgage * spellPower.
-
-                elementalDamage *= (2 - enemyElementalResistance);
-                totalElementalDamage += elementalDamage;
-            }
-            else {
-                ElementalAttackDamageCompatMod.LOGGER.info("Unable to get attribute from entity because elementalDamage is null");
-            }
-        }
-
-        if(totalElementalDamage != 0)
-            return totalElementalDamage;
-        else {
-            return originalTotalDamage;
-        }
-    }
-
-    public static Float sumOfDamages(HashMap<String, Float> elementalData) {
-        Float sum = 0f;
+    public static float sumOfDamages(HashMap<String, Float> elementalData) {
+        float sum = 0f;
         for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
             sum += entry.getValue();
         }
         return sum;
     }
-
-    public static HashMap<String, Float> getAllElementalData(LivingEntity livingAttacker, boolean isSpell, Map.Entry<String, Float> otherDamage) {
+    public static HashMap<String, Float> getAllElementalData(LivingEntity livingAttacker, LivingEntity livingDefender, boolean isSpell, Map.Entry<String, Float> otherDamage) {
 
         HashMap<String, Float> result = new HashMap<>();
 
         HashMap<String, Float> baseDamage = getBaseElementalDamagesData(livingAttacker, isSpell, otherDamage);
-        HashMap<String, Float> elementalIncreasesAndDecreases = getElementalIncreaesAndDecreasesData(livingAttacker, isSpell);
+        HashMap<String, Float> elementalIncreasesAndDecreases = getElementalIncreasesAndDecreasesData(livingAttacker, isSpell);
         HashMap<String, Float> elementalMoreAndLessModifiers = getElementalMoreAndLessModifiersData(livingAttacker, isSpell);
-        //todo: resistances
+        HashMap<String, Float> enemyElementalResistances = getElementalResistances(livingDefender);
 
         result.putAll(baseDamage);
+        /*
+        for(var entryB : mapB.entrySet()) {
+            mapA.compute(entryB.getKey(), (keyA, valueA) -> {
+                var num2 = mapB.get(key);
+                return valueA plusMinusTimesDivide num2;
+            })
+        }
+         */
+
+
         for(Map.Entry<String, Float> entry : elementalIncreasesAndDecreases.entrySet()) {
             result.compute(entry.getKey(), (key, value) -> {
                 Float increaseOrDecreaseEffectiveMultiplier = elementalIncreasesAndDecreases.get(key);
@@ -344,9 +240,12 @@ public class DamageManager {
             });
         }
 
-        //todo: resistances
-        //todo: attack/spell increases/decreases
-        //todo: attack/spell more/less modifiers
+        for(Map.Entry<String, Float> entry : enemyElementalResistances.entrySet()) {
+            result.compute(entry.getKey(), (key, value) -> {
+                Float postResistanceDamageMultiplier = elementalMoreAndLessModifiers.get(key);
+                return value * postResistanceDamageMultiplier;
+            });
+        }
 
         return result;
     }
@@ -364,12 +263,66 @@ public class DamageManager {
         }
         return baseElementalData;
     }
-    public static HashMap<String, Float> getElementalIncreaesAndDecreasesData(LivingEntity livingAttacker, boolean isSpell) {
-        return getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_BASE);
+    public static HashMap<String, Float> getElementalIncreasesAndDecreasesData(LivingEntity livingAttacker, boolean isSpell) {
+        HashMap<String, Float> elementalIncreasesAndDecreasesData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_BASE);
+        String spellOrAttack = isSpell ? "spell" : "attack";
+        Attribute spellOrAttackAttribute = ModAttributes.getAttribute(String.format("%s:%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, spellOrAttack));
+
+        if(spellOrAttackAttribute != null && livingAttacker.getAttribute(spellOrAttackAttribute) != null) {
+            List<AttributeModifier> increaseOrDecreaseModifiers = livingAttacker.getAttribute(spellOrAttackAttribute).getModifiers()
+                    .stream()
+                    .filter(attributeModifier -> attributeModifier.getOperation() == AttributeModifier.Operation.MULTIPLY_BASE)
+                    .toList();
+
+            float sum = 0;
+            for(AttributeModifier increaseOrDecreaseModifier : increaseOrDecreaseModifiers) {
+                sum += (float) increaseOrDecreaseModifier.getAmount();
+            }
+
+            for(Map.Entry<String, Float> entry : elementalIncreasesAndDecreasesData.entrySet()) {
+                elementalIncreasesAndDecreasesData.put(entry.getKey(), entry.getValue() + sum);
+            }
+        }
+
+        return elementalIncreasesAndDecreasesData;
     }
     public static HashMap<String, Float> getElementalMoreAndLessModifiersData(LivingEntity livingAttacker, boolean isSpell) {
-        return getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_TOTAL);
+        HashMap<String, Float> elementalMoreAndLessModifiers = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_TOTAL);
+        String spellOrAttack = isSpell ? "spell" : "attack";
+        Attribute spellOrAttackAttribute = ModAttributes.getAttribute(String.format("%s:%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, spellOrAttack));
+
+        if(spellOrAttackAttribute != null && livingAttacker.getAttribute(spellOrAttackAttribute) != null) {
+            List<AttributeModifier> moreOrLessModifiers = livingAttacker.getAttribute(spellOrAttackAttribute).getModifiers()
+                    .stream()
+                    .filter(attributeModifier -> attributeModifier.getOperation() == AttributeModifier.Operation.MULTIPLY_TOTAL)
+                    .toList();
+
+            float product = 1;
+            for(AttributeModifier increaseOrDecreaseModifier : moreOrLessModifiers) {
+                product *= (float) increaseOrDecreaseModifier.getAmount();
+            }
+
+            for(Map.Entry<String, Float> entry : elementalMoreAndLessModifiers .entrySet()) {
+                elementalMoreAndLessModifiers .put(entry.getKey(), entry.getValue() * product);
+            }
+        }
+
+        return elementalMoreAndLessModifiers;
     }
+    private static HashMap<String, Float> getElementalResistances(LivingEntity livingDefender) {
+        HashMap<String, Float> elementalResistanceData = new HashMap<>();
+
+        for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
+            //Enemy resistances
+            Float elementalResistance = ModAttributes.getAttributeValue(livingDefender, String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName));
+            if(elementalResistance == null) elementalResistance = 1f; //by default, what elemental resistances are.
+
+            elementalResistanceData.put(elementalAttributeName, elementalResistance);
+        }
+
+        return elementalResistanceData;
+    }
+
     private static List<AttributeModifier> filterElementalAttributeModifiersByOperation(LivingEntity livingAttacker, String elementalAttributeName, boolean isSpell, AttributeModifier.Operation operation) {
         String spellOrAttack = isSpell ? "spell" : "attack";
         Attribute elementalDamageAttribute = ModAttributes.getAttribute(String.format("%s:%s_%s_damage",

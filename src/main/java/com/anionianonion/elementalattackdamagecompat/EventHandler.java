@@ -26,6 +26,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION;
@@ -34,7 +35,7 @@ import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operati
 public class EventHandler {
 
     protected static final ThreadLocal<Boolean> PROCESSING_CUSTOM_DAMAGE = ThreadLocal.withInitial(() -> false);
-    protected static Float cc = 0.1f;
+    protected static Float cc = 0.05f;
     protected static Float cd = 1.5f;
 
     @SubscribeEvent
@@ -50,11 +51,11 @@ public class EventHandler {
             //bow gets added damage (and 'increases', and 'more' multipliers), multiplied by speed in blocks/s
         //----RANGED----: BOWS & CROSSBOWS SPECIFICALLY
         if(directEntity instanceof Arrow arrow) {
-            DamageManager.manageArrowShot(livingAttacker, arrow, e);
+            DamageManager.manageArrowShot(livingAttacker, arrow, e); //I need e in order to get the event to set the damage within the function
         }
         //---MELEE----     AND  ---RANGED---: OTHER PROJECTILES
         else if(livingAttacker == directEntity || directEntity instanceof AbstractArrow) {
-            DamageManager.manageMeleeAndOtherProjectiles(livingAttacker, directEntity, damageSource, e);
+            DamageManager.manageMeleeAndOtherProjectiles(livingAttacker, directEntity, damageSource, e); //ignore this warning, living attacker null check is in hasFailedInitialCheck(damageSource)
         }
     }
 
@@ -65,7 +66,9 @@ public class EventHandler {
         SpellDamageSource spellDamageSource = e.getSpellDamageSource();
         LivingEntity caster = (LivingEntity) spellDamageSource.get().getEntity();
         var originalTotalDamage = e.getOriginalAmount();
-        float baseTotalElementalDamage = DamageManager.calculateBaseTotalElementalDamageFromSpellsPostElementalResistances(spellDamageSource, e.getEntity(), originalTotalDamage);
+        var spellSchool = spellDamageSource.spell().getSchoolType().getId().getPath();
+
+        float baseTotalElementalDamage = DamageManager.sumOfDamages(DamageManager.getAllElementalData(caster, e.getEntity(), true, Map.entry(spellSchool, originalTotalDamage)));
         float critAdjustedDamage = DamageManager.simpleCritRoll(caster, true, baseTotalElementalDamage);
 
         int roundedDamage = Math.round(critAdjustedDamage);
