@@ -298,8 +298,8 @@ public class DamageManager {
                     .toList();
 
             float product = 1;
-            for(AttributeModifier increaseOrDecreaseModifier : moreOrLessModifiers) {
-                product *= (float) increaseOrDecreaseModifier.getAmount();
+            for(AttributeModifier moreOrLessModifier : moreOrLessSpellOrAttackModifiers) {
+                product *= (float) (1 + moreOrLessModifier.getAmount());
             }
 
             for(Map.Entry<String, Float> entry : elementalMoreAndLessModifiers .entrySet()) {
