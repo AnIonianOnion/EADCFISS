@@ -46,17 +46,17 @@ public class Config {
             MOD_COMPAT_ATTACK_CRIT_CHANCE_ATTRIBUTE_ID = BUILDER
                     .comment("\nThis is an id of an attribute. (Can be from another mod that provides attributes like Apothic Attributes aka. attributeslib.) " +
                             "Specifically, this option will use that mod's crit chance attribute as its own for attacks." +
-                            "\nDefault: \"attributeslib:crit_chance\"")
-                    .define("attackCritChanceAttributeId", "attributeslib:crit_chance");
+                            "\nDefault: \"elementalattackdamagecompat:attack_crit_chance\"")
+                    .define("attackCritChanceAttributeId", "elementalattackdamagecompat:attack_crit_chance");
             MOD_COMPAT_ATTACK_CRIT_DAMAGE_ATTRIBUTE_ID = BUILDER
                     .comment("Same as the last one, but for crit damage instead." +
-                            "\nDefault: \"attributeslib:crit_damage\"")
-                    .define("attackCritDamageAttributeId", "attributeslib:crit_damage");
+                            "\nDefault: \"elementalattackdamagecompat:attack_crit_damage\"")
+                    .define("attackCritDamageAttributeId", "elementalattackdamagecompat:attack_crit_damage");
             APPLY_ATTACK_CRIT_ATTRIBUTES_GLOBALLY = BUILDER
-                    .comment("Whether the two above crit attributes will also apply to spells, such as from Iron's Spells and Spellbooks. " +
-                            "If false, it will only apply to attacks, and this mod will use its global attributes instead." +
-                            "\nDefault: true")
-                    .define("applyAttackCritAttributesGlobally", true);
+                    .comment("If you already have a global crit attribute you want to use, this option modifiers whether the two above crit attributes will also apply to spells, such as from Iron's Spells and Spellbooks. " +
+                            "If false, the crit attributes will only apply to attacks, and this mod will use its global attributes instead." +
+                            "\nDefault: false")
+                    .define("applyAttackCritAttributesGlobally", false);
 
             MOD_COMPAT_GLOBAL_CRIT_CHANCE_ATTRIBUTE_ID = BUILDER
                     .comment("\nIf applyAttackCritAttributesGlobally is true, then this and the next option won't be used. " +
@@ -84,7 +84,7 @@ public class Config {
                             "\nif false: " +
                             "\n\ttotal *spell* crit chance will be the sum of global crit chance + spell crit chance + this value, and " +
                             "\n\ttotal *attack* crit chance will be the sum of global crit chance + attack crit chance + this value.")
-                    .defineInRange("modCompatCritChanceOffset", -0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+                    .defineInRange("modCompatCritChanceOffset", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
             MOD_COMPAT_CRIT_DAMAGE_OFFSET = BUILDER
                     .comment("if 'applyAttackCritAttributesGlobally' is true: total *spell* crit damage is the sum of the sum of attack crit damage + spell crit damage + this value." +
                             "\ntotal *attack* crit damage will be the sum of attack crit damage + this value." +
@@ -92,7 +92,7 @@ public class Config {
                             "\n\ttotal *spell* crit damage will be the sum of global crit damage + spell crit damage + this value, and " +
                             "\n\ttotal *attack* crit damage will be the sum of global crit damage + attack crit damage + this value." +
                             "\nDefault: -1 (minus 100% flat crit damage)")
-                    .defineInRange("modCompatCritDamageOffset", -1, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+                    .defineInRange("modCompatCritDamageOffset", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
 
         BUILDER.pop();
         
@@ -123,7 +123,7 @@ public class Config {
     public static String globalCritChanceAttributeId, globalCritDamageAttributeId;
     public static String spellCritChanceAttributeId, spellCritDamageAttributeId;
     public static double modCompatCritChanceOffset, modCompatCritDamageOffset;
-    public static List<String> elementalSchoolType;
+    public static List<String> type1schools, type2schools, type3schools;
 
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event)
@@ -141,7 +141,9 @@ public class Config {
         spellCritDamageAttributeId = MOD_COMPAT_SPELL_CRIT_DAMAGE_ATTRIBUTE_ID.get();
         modCompatCritChanceOffset = MOD_COMPAT_CRIT_CHANCE_OFFSET.get();
         modCompatCritDamageOffset = MOD_COMPAT_CRIT_DAMAGE_OFFSET.get();
-        elementalSchoolType = new ArrayList<>(TYPE_1_SCHOOLS.get());
+        type1schools = new ArrayList<>(TYPE_1_SCHOOLS.get());
+        type2schools = new ArrayList<>(TYPE_2_SCHOOLS.get());
+        type3schools = new ArrayList<>(TYPE_3_SCHOOLS.get());
 
     }
 }

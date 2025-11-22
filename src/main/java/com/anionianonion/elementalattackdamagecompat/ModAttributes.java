@@ -4,11 +4,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 
 import java.util.*;
 
@@ -54,28 +54,28 @@ public interface ModAttributes {
                     () -> new RangedAttribute(String.format("spell_damage.%s", elementName), 0, 0, Double.POSITIVE_INFINITY));
         }
         ATTRIBUTES_REGISTRY.register("attack_crit_chance",
-                () -> new RangedAttribute("attack.crit_chance", 0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+                () -> new RangedAttribute("attack.crit_chance", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
         ATTRIBUTES_REGISTRY.register("attack_crit_damage",
-                () -> new RangedAttribute("attack.crit_damage", 1.5, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+                () -> new RangedAttribute("attack.crit_damage", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
 
         ATTRIBUTES_REGISTRY.register("spell_crit_chance",
-                () -> new RangedAttribute("spell.crit_chance", 0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+                () -> new RangedAttribute("spell.crit_chance", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
         ATTRIBUTES_REGISTRY.register("spell_crit_damage",
-                () -> new RangedAttribute("spell.crit_damage", 1.5, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+                () -> new RangedAttribute("spell.crit_damage", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
 
         ATTRIBUTES_REGISTRY.register("global_crit_chance",
                 () -> new RangedAttribute("global.crit_chance", 0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
         ATTRIBUTES_REGISTRY.register("global_crit_damage",
-                () -> new RangedAttribute("global.crit_damage", 0.05, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
+                () -> new RangedAttribute("global.crit_damage", 1.5, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
 
-        ATTRIBUTES_REGISTRY.register("elemental_damage",
-                () -> new RangedAttribute("multipliers.elemental_damage", 1, 0, Double.POSITIVE_INFINITY));
-        ATTRIBUTES_REGISTRY.register("spirit_damage",
-                () -> new RangedAttribute("multipliers.spirit_damage", 1, 0, Double.POSITIVE_INFINITY));
+        ATTRIBUTES_REGISTRY.register("type_1",
+                () -> new RangedAttribute("multipliers.type_1_damage", 1, 0, Double.POSITIVE_INFINITY));
+        ATTRIBUTES_REGISTRY.register("type_2",
+                () -> new RangedAttribute("multipliers.type_2_damage", 1, 0, Double.POSITIVE_INFINITY));
 
-        ATTRIBUTES_REGISTRY.register("spell_damage",
+        RegistryObject<Attribute> SPELL_MULTIPLIER = ATTRIBUTES_REGISTRY.register("spell_damage_multiplier",
                 () -> new RangedAttribute("multipliers.spell_damage", 1, 0, Double.POSITIVE_INFINITY));
-        ATTRIBUTES_REGISTRY.register("attack_damage",
+        RegistryObject<Attribute> ATTACK_MULTIPLIER = ATTRIBUTES_REGISTRY.register("attack_damage_multiplier",
                 () -> new RangedAttribute("multipliers.attack_damage", 1, 0, Double.POSITIVE_INFINITY));
 
         ATTRIBUTES_REGISTRY.register(eventBus);
