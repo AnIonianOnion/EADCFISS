@@ -178,7 +178,6 @@ public class DamageManager {
         arrow.setCritArrow(DamageManager.rollForIfAttacksCrit(livingAttacker));
 
         float postCritDamage = preCritDamage;
-
         if(arrow.isCritArrow()) {
             postCritDamage = preCritDamage * critDamage;
         }
