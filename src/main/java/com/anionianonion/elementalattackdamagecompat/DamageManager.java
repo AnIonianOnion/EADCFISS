@@ -196,7 +196,7 @@ public class DamageManager {
         }
         return postCritDamage;
     }
-    public static float simpleCritRoll(LivingEntity livingAttackerOrCaster, boolean isSpell, float preCritDamage) {
+    public static float getPostCritDamage(LivingEntity livingAttackerOrCaster, boolean isSpell, float preCritDamage) {
         float postCritDamage = preCritDamage;
 
         Float critChance, critDamage;
