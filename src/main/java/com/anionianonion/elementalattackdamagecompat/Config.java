@@ -97,17 +97,16 @@ public class Config {
         BUILDER.pop();
         
         BUILDER.push("Classify Types");
+            BUILDER.comment("Spells from schools in this list will be categorized into Type 1, Type 2, and Type 3, and benefit from \"Type 1\", \"Type 2\", and \"Type 3\" damage modifiers respectively." +
+                "\nCategory name is customizable by going to your lang file, and using 'multipliers.type_1_damage', 'multipliers.type_2_damage', and 'multipliers.type_3_damage'.");
             TYPE_1_SCHOOLS = BUILDER
-                    .comment("Spells from schools in this list will be categorized into Type 1 and benefit from \"Type 1\" damage modifiers. " +
-                            "\nCategory name is customizable by going to your lang file and using lang key: 'multipliers.type_1_damage.'")
+                    .comment("Default list: [\"fire\", \"ice\", \"lightning\"]")
                     .defineListAllowEmpty("type_1_schools", List.of("fire", "ice", "lightning"), Config::validateIsString);
             TYPE_2_SCHOOLS = BUILDER
-                    .comment("Spells from schools in this list will be categorized into Type 2 and benefit from \"Type 2\" damage modifiers. " +
-                            "\nCategory name is customizable by going to your lang file and using lang key: 'multipliers.type_2_damage.'")
+                    .comment("Default list: [\"holy\", \"ender\", \"eldritch\"]")
                     .defineListAllowEmpty("type_2_schools", List.of("holy", "ender", "eldritch"), Config::validateIsString);
             TYPE_3_SCHOOLS = BUILDER
-                    .comment("Spells from schools in this list will be categorized into Type 3 and benefit from \"Type 3\" damage modifiers. " +
-                            "\nCategory name is customizable by going to your lang file and using lang key: 'multipliers.type_3_damage.'")
+                    .comment("Default list: [\"blood\", \"nature\", \"evocation\"]")
                     .defineListAllowEmpty("type_3_schools", List.of("blood", "nature", "evocation"), Config::validateIsString);
 
     }
