@@ -59,6 +59,29 @@ public class EventHandler {
         }
     }
 
+    //according to ISS, this only works for melee attacks due to Forge limitations, and ISS having its own event system.
+    @SubscribeEvent
+    public static void attackCrit(CriticalHitEvent e) {
+        Player player = e.getEntity();
+        HashMap<String, Float> critData = DamageManager.getCritData(player, false);
+        Float critDamage = critData.get("crit_damage");
+
+        boolean isUsingBowItem = player.getItemInHand(player.getUsedItemHand()).getItem() instanceof BowItem;
+
+        if((e.isVanillaCritical() && !Config.disableVanillaFallingCrit)) {
+
+            e.setResult(Event.Result.ALLOW);
+            e.setDamageModifier(critDamage);
+        }
+        else {
+            e.setResult(Event.Result.DENY);
+            if(DamageManager.rollForIfAttacksCrit(player)) {
+                e.setResult(Event.Result.ALLOW);
+                e.setDamageModifier(critDamage);
+            }
+        }
+    }
+
     @SubscribeEvent
     public static void spells(SpellDamageEvent e) {
         if(ElementalAttackDamageCompatMod.IS_RANDOM_DAMAGE_MOD_ENABLED) return;
