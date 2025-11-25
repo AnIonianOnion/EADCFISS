@@ -163,7 +163,7 @@ public class DamageManager {
     public static float calculateCritArrow(Arrow arrow, LivingEntity livingAttacker, float preCritDamage) {
         //vanilla MC assumes that a fully charged bow or crossbow will automatically crit.
         if(arrow.isCritArrow() && Config.disableVanillaFullyChargedBowCrit) {
-            arrow.setCritArrow(false);
+            arrow.setCritArrow(rollForIfAttacksCrit(livingAttacker));
         }
         Float critChance, critDamage;
         HashMap<String, Float> critData = getCritData(livingAttacker, false);
