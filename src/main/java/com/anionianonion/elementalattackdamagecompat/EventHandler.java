@@ -5,27 +5,20 @@ import io.redspace.ironsspellbooks.damage.SpellDamageSource;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
-import net.minecraft.world.item.BowItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraftforge.event.ItemAttributeModifierEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.player.CriticalHitEvent;
-import net.minecraftforge.eventbus.api.Event;
+import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -46,6 +39,7 @@ public class EventHandler {
 
         LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
         var directEntity = damageSource.getDirectEntity();
+
         //attacker
             //melee & non-bow projectiles gets flat added damage (and 'increases', and 'more' multipliers), nothing else
             //bow gets added damage (and 'increases', and 'more' multipliers), multiplied by speed in blocks/s
@@ -58,7 +52,7 @@ public class EventHandler {
             DamageManager.manageMeleeAndOtherProjectiles(livingAttacker, directEntity, damageSource, e); //ignore this warning, living attacker null check is in hasFailedInitialCheck(damageSource)
         }
     }
-    
+
 
     @SubscribeEvent
     public static void spells(SpellDamageEvent e) {
@@ -69,8 +63,8 @@ public class EventHandler {
         var originalTotalDamage = e.getOriginalAmount();
         var spellSchool = spellDamageSource.spell().getSchoolType().getId().getPath();
 
-        float baseTotalElementalDamage = DamageManager.sumOfDamages(DamageManager.getAllElementalData(caster, e.getEntity(), true, Map.entry(spellSchool, originalTotalDamage)));
-        float critAdjustedDamage = DamageManager.simpleCritRoll(caster, true, baseTotalElementalDamage);
+        float baseTotalElementalDamage = DamageManager.sumOfDamages(AttributeHelpers.getAllElementalData(caster, e.getEntity(), true, Map.entry(spellSchool, originalTotalDamage)));
+        float critAdjustedDamage = DamageManager.calculatePostCritDamage(caster, true, baseTotalElementalDamage);
 
         int roundedDamage = Math.round(critAdjustedDamage);
         e.setAmount(roundedDamage);

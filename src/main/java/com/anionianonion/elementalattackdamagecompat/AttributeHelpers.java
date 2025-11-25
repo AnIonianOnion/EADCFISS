@@ -1,0 +1,310 @@
+package com.anionianonion.elementalattackdamagecompat;
+
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class AttributeHelpers {
+
+    public static HashMap<String, Float> getAllElementalData(LivingEntity livingAttacker, LivingEntity livingDefender, boolean isSpell, Map.Entry<String, Float> otherDamage) {
+
+        HashMap<String, Float> baseDamage = getBaseElementalDamagesData(livingAttacker, isSpell, otherDamage);
+        HashMap<String, Float> elementalIncreasesAndDecreases = getElementalIncreasesAndDecreasesData(livingAttacker, isSpell);
+        HashMap<String, Float> elementalMoreAndLessModifiers = getElementalMoreAndLessModifiersData(livingAttacker, isSpell);
+        HashMap<String, Float> enemyElementalResistances = getElementalResistances(livingDefender);
+
+        HashMap<String, Float> result = new HashMap<>(baseDamage);
+        /*
+        for(var entryB : mapB.entrySet()) {
+            mapA.compute(entryB.getKey(), (keyA, valueA) -> {
+                var num2 = mapB.get(key);
+                return valueA plusMinusTimesDivide num2;
+            })
+        }
+         */
+
+
+        for(Map.Entry<String, Float> entry : elementalIncreasesAndDecreases.entrySet()) {
+            result.compute(entry.getKey(), (key, value) -> {
+                Float increaseOrDecreaseEffectiveMultiplier = elementalIncreasesAndDecreases.get(key);
+                return value * increaseOrDecreaseEffectiveMultiplier;
+            });
+        }
+
+        for(Map.Entry<String, Float> entry : elementalMoreAndLessModifiers.entrySet()) {
+            result.compute(entry.getKey(), (key, value) -> {
+                Float moreOrLessEffectiveMultiplier = elementalMoreAndLessModifiers.get(key);
+                return value * moreOrLessEffectiveMultiplier;
+            });
+        }
+
+        for(Map.Entry<String, Float> entry : enemyElementalResistances.entrySet()) {
+            result.compute(entry.getKey(), (key, value) -> {
+                Float postResistanceDamageMultiplier = enemyElementalResistances.get(key);
+                return value * postResistanceDamageMultiplier;
+            });
+        }
+
+        return result;
+    }
+    public static HashMap<String, Float> getBaseElementalDamagesData(LivingEntity livingAttacker, boolean isSpell, Map.Entry<String, Float> otherDamage) {
+
+        HashMap<String, Float> baseElementalData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.ADDITION);
+        if(ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES.contains(otherDamage.getKey())) {
+            baseElementalData.put(
+                    otherDamage.getKey(),
+                    baseElementalData.get(otherDamage.getKey()) + otherDamage.getValue()
+            );
+        }
+        else {
+            baseElementalData.put(otherDamage.getKey(), otherDamage.getValue());
+        }
+        return baseElementalData;
+    }
+    public static HashMap<String, Float> getElementalIncreasesAndDecreasesData(LivingEntity livingAttacker, boolean isSpell) {
+        HashMap<String, Float> elementalIncreasesAndDecreasesData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_BASE);
+
+        if(!isSpell) {
+            float netIncreasePhysicalMultiplier = 1 + getNetIncrease(livingAttacker, Attributes.ATTACK_DAMAGE);
+            elementalIncreasesAndDecreasesData.put("physical", netIncreasePhysicalMultiplier);
+        }
+
+        float type1SchoolNetIncrease = getNetIncrease(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_1_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
+        for(String spellSchool : Config.type1schools) {
+            if(elementalIncreasesAndDecreasesData.containsKey(spellSchool)) {
+                elementalIncreasesAndDecreasesData.replace(
+                        spellSchool,
+                        elementalIncreasesAndDecreasesData.get(spellSchool) + type1SchoolNetIncrease);
+            }
+        }
+
+        float type2SchoolNetIncrease = getNetIncrease(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_2_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
+        for(String spellSchool : Config.type2schools) {
+            if(elementalIncreasesAndDecreasesData.containsKey(spellSchool)) {
+                elementalIncreasesAndDecreasesData.replace(
+                        spellSchool,
+                        elementalIncreasesAndDecreasesData.get(spellSchool) + type2SchoolNetIncrease);
+            }
+        }
+
+        float type3SchoolNetIncrease = getNetIncrease(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_3_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
+        for(String spellSchool : Config.type3schools) {
+            if(elementalIncreasesAndDecreasesData.containsKey(spellSchool)) {
+                elementalIncreasesAndDecreasesData.replace(
+                        spellSchool,
+                        elementalIncreasesAndDecreasesData.get(spellSchool) + type3SchoolNetIncrease);
+            }
+        }
+
+        String spellOrAttack = isSpell ? "spell" : "attack";
+        Attribute spellOrAttackAttribute = ModAttributes.getAttribute(String.format("%s:%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, spellOrAttack));
+        float sum = getNetIncrease(livingAttacker, spellOrAttackAttribute);
+        elementalIncreasesAndDecreasesData.replaceAll((k, v) -> v + sum);
+
+        return elementalIncreasesAndDecreasesData;
+    }
+    public static HashMap<String, Float> getElementalMoreAndLessModifiersData(LivingEntity livingAttacker, boolean isSpell) {
+        HashMap<String, Float> elementalMoreAndLessModifiersData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_TOTAL);
+
+        if(!isSpell) {
+            float effectiveMorePhysMultiplier = 1 + getEffectiveMore(livingAttacker, Attributes.ATTACK_DAMAGE);
+            elementalMoreAndLessModifiersData.put("physical", effectiveMorePhysMultiplier);
+        }
+
+        float type1SchoolEffectiveMoreMultiplier = 1 + getEffectiveMore(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_1_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
+        for(String spellSchool : Config.type1schools) {
+            if(elementalMoreAndLessModifiersData.containsKey(spellSchool)) {
+                elementalMoreAndLessModifiersData.replace(
+                        spellSchool,
+                        elementalMoreAndLessModifiersData.get(spellSchool) * type1SchoolEffectiveMoreMultiplier);
+            }
+        }
+
+        float type2SchoolEffectiveMoreMultiplier = 1 + getEffectiveMore(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_2_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
+        for(String spellSchool : Config.type2schools) {
+            if(elementalMoreAndLessModifiersData.containsKey(spellSchool)) {
+                elementalMoreAndLessModifiersData.replace(
+                        spellSchool,
+                        elementalMoreAndLessModifiersData.get(spellSchool) * type2SchoolEffectiveMoreMultiplier);
+            }
+        }
+
+        float type3SchoolEffectiveMoreMultiplier = 1 + getEffectiveMore(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_3_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
+        for(String spellSchool : Config.type3schools) {
+            if(elementalMoreAndLessModifiersData.containsKey(spellSchool)) {
+                elementalMoreAndLessModifiersData.replace(
+                        spellSchool,
+                        elementalMoreAndLessModifiersData.get(spellSchool) * type3SchoolEffectiveMoreMultiplier);
+            }
+        }
+
+        String spellOrAttack = isSpell ? "spell" : "attack";
+        Attribute spellOrAttackAttribute = ModAttributes.getAttribute(String.format("%s:%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, spellOrAttack));
+        float product = getEffectiveMore(livingAttacker, spellOrAttackAttribute);
+        elementalMoreAndLessModifiersData.replaceAll((k, v) -> v * (1 + product));
+
+        return elementalMoreAndLessModifiersData;
+    }
+    private static HashMap<String, Float> getElementalResistances(LivingEntity livingDefender) {
+        HashMap<String, Float> elementalResistanceData = new HashMap<>();
+
+        for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
+            //Enemy resistances
+            Float elementalResistance = ModAttributes.getAttributeValue(livingDefender, String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName));
+            if(elementalResistance == null) elementalResistance = 1f; //by default, what elemental resistances are.
+
+            elementalResistanceData.put(elementalAttributeName, elementalResistance);
+        }
+
+        return elementalResistanceData;
+    }
+
+    private static List<AttributeModifier> filterSpecificElementalAttributeModifiersByOperation(LivingEntity livingAttacker, String elementalAttributeName, boolean isSpell, AttributeModifier.Operation operation) {
+        String spellOrAttack = isSpell ? "spell" : "attack";
+        Attribute elementalDamageAttribute = ModAttributes.getAttribute(String.format("%s:%s_%s_damage", ElementalAttackDamageCompatMod.MOD_ID, elementalAttributeName, spellOrAttack));
+
+        if(elementalDamageAttribute != null && livingAttacker.getAttribute(elementalDamageAttribute) != null) {
+            return livingAttacker.getAttribute(elementalDamageAttribute).getModifiers()
+                    .stream()
+                    .filter(attribute -> attribute.getOperation() == operation)
+                    .toList();
+        }
+        return null;
+    }
+
+    //depending on operation: gets hashmap detailing base added damage, increased/decreased damage, or more/less damage.
+    private static HashMap<String, Float> getElementalDataForGivenOperation(LivingEntity livingAttacker, boolean isSpell, AttributeModifier.Operation operation) {
+
+        HashMap<String, Float> elementalData = new HashMap<>();
+
+        for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
+            List<AttributeModifier> attributeModifiers = filterSpecificElementalAttributeModifiersByOperation(livingAttacker, elementalAttributeName, isSpell, operation);
+
+            if(attributeModifiers != null) {
+
+                if(operation == AttributeModifier.Operation.ADDITION || operation == AttributeModifier.Operation.MULTIPLY_BASE) {
+                    float sum = operation == AttributeModifier.Operation.MULTIPLY_BASE ? 1 : 0;
+                    for (var attributeModifier : attributeModifiers) {
+                        sum += (float) attributeModifier.getAmount();
+                    }
+                    elementalData.put(elementalAttributeName, sum);
+                }
+                else {
+                    float product = 1;
+                    for (var attributeModifier : attributeModifiers) {
+                        product *= (float) (1 + attributeModifier.getAmount());
+                    }
+                    elementalData.put(elementalAttributeName, product);
+                }
+            }
+            else {
+                switch (operation) {
+                    case ADDITION:
+                        elementalData.put(elementalAttributeName, 0f);
+                        break;
+                    case MULTIPLY_BASE:
+                    case MULTIPLY_TOTAL:
+                        elementalData.put(elementalAttributeName, 1f);
+                }
+            }
+        }
+        return elementalData;
+    }
+    public static HashMap<String, Float> getCritData(LivingEntity livingAttackerOrCaster, boolean isSpell) {
+
+        HashMap<String, Float> critData = new HashMap<>();
+        Float critChance, critDamage;
+
+        if(isSpell) {
+            critChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.spellCritChanceAttributeId);
+            if(critChance == null) critChance = EventHandler.cc;
+            critDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.spellCritDamageAttributeId);
+            if(critDamage == null) critDamage = EventHandler.cd;
+
+            if(Config.applyAttackCritAttributesGlobally) {
+                Float secondaryCritChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritChanceAttributeId);
+                if(secondaryCritChance == null) secondaryCritChance = 0f;
+                Float secondaryCritDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritDamageAttributeId);
+                if(secondaryCritDamage == null) secondaryCritDamage = 0f;
+
+                critChance += secondaryCritChance + (float) Config.modCompatCritChanceOffset;
+                critDamage += secondaryCritDamage + (float) Config.modCompatCritDamageOffset;
+            }
+            else {
+                Float secondaryCritChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritChanceAttributeId);
+                if(secondaryCritChance == null) secondaryCritChance = 0f;
+                Float secondaryCritDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritDamageAttributeId);
+                if(secondaryCritDamage == null) secondaryCritDamage = 0f;
+
+                critChance += secondaryCritChance + (float) Config.modCompatCritChanceOffset;
+                critDamage += secondaryCritDamage + (float) Config.modCompatCritDamageOffset;
+            }
+        }
+        else {
+            critChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritChanceAttributeId);
+            if(critChance == null) critChance = EventHandler.cc;
+            critDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritDamageAttributeId);
+            if(critDamage == null) critDamage = EventHandler.cd;
+
+            if(!Config.applyAttackCritAttributesGlobally) {
+                Float secondaryCritChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritChanceAttributeId);
+                if(secondaryCritChance == null) secondaryCritChance = 0f;
+                Float secondaryCritDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritDamageAttributeId);
+                if(secondaryCritDamage == null) secondaryCritDamage = 0f;
+
+                critChance += secondaryCritChance + (float) Config.modCompatCritChanceOffset;
+                critDamage += secondaryCritDamage + (float) Config.modCompatCritDamageOffset;
+            }
+        }
+
+        critData.put("crit_chance", critChance);
+        critData.put("crit_damage", critDamage);
+
+        return critData;
+    }
+
+    //other methods
+    public static Float getBaseTotal(LivingEntity livingEntity, Attribute attribute) {
+        float base = 0;
+        if(attribute != null && livingEntity.getAttribute(attribute) != null) {
+            base = (float) livingEntity.getAttribute(attribute).getBaseValue();
+            List<AttributeModifier> addedOrSubtractedModifiers = filterAttributeModifiersByOperation(livingEntity, attribute, AttributeModifier.Operation.ADDITION);
+            for(AttributeModifier attributeModifier : addedOrSubtractedModifiers) {
+                base += (float) attributeModifier.getAmount();
+            }
+        }
+        return base;
+    }
+    public static Float getNetIncrease(LivingEntity livingEntity, Attribute attribute) {
+        float netIncrease = 0;
+        if(attribute != null && livingEntity.getAttribute(attribute) != null) {
+            List<AttributeModifier> increaseOrDecreaseDamageModifiers = filterAttributeModifiersByOperation(livingEntity, attribute, AttributeModifier.Operation.MULTIPLY_BASE);
+            for(AttributeModifier attributeModifier : increaseOrDecreaseDamageModifiers) {
+                netIncrease += (float) attributeModifier.getAmount();
+            }
+        }
+        return netIncrease;
+    }
+    public static Float getEffectiveMore(LivingEntity livingEntity, Attribute attribute) {
+        float effectiveMore = 1;
+        if(attribute != null && livingEntity.getAttribute(attribute) != null) {
+            List<AttributeModifier> increaseOrDecreaseDamageModifiers = filterAttributeModifiersByOperation(livingEntity, attribute, AttributeModifier.Operation.MULTIPLY_TOTAL);
+            for(AttributeModifier attributeModifier : increaseOrDecreaseDamageModifiers) {
+                effectiveMore *= 1 + (float) attributeModifier.getAmount();
+            }
+        }
+        return effectiveMore - 1;
+    }
+    public static List<AttributeModifier> filterAttributeModifiersByOperation(LivingEntity livingEntity, Attribute attribute, AttributeModifier.Operation operation) {
+        return livingEntity.getAttribute(attribute)
+                .getModifiers()
+                .stream()
+                .filter(attributeModifier -> attributeModifier.getOperation() == operation)
+                .toList();
+    }
+}

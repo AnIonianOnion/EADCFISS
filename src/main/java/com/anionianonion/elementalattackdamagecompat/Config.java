@@ -44,7 +44,7 @@ public class Config {
                     .define("disableVanillaFullyChargedBowCrits", false);
 
             MOD_COMPAT_ATTACK_CRIT_CHANCE_ATTRIBUTE_ID = BUILDER
-                    .comment("\nThis is an id of an attribute. (Can be from another mod that provides attributes like Apothic Attributes aka. attributeslib.) " +
+                    .comment("This is an id of an attribute. (Can be from another mod that provides attributes like Apothic Attributes aka. attributeslib.) " +
                             "Specifically, this option will use that mod's crit chance attribute as its own for attacks." +
                             "\nDefault: \"elementalattackdamagecompat:attack_crit_chance\"")
                     .define("attackCritChanceAttributeId", "elementalattackdamagecompat:attack_crit_chance");
@@ -59,7 +59,7 @@ public class Config {
                     .define("applyAttackCritAttributesGlobally", false);
 
             MOD_COMPAT_GLOBAL_CRIT_CHANCE_ATTRIBUTE_ID = BUILDER
-                    .comment("\nIf applyAttackCritAttributesGlobally is true, then this and the next option won't be used. " +
+                    .comment("If applyAttackCritAttributesGlobally is true, then this and the next option won't be used. " +
                             "\nThis attribute id gets the attribute used, and it will affect the crit chance of both attacks and spells." +
                             "Default: \"elementalattackdamagecompat:global_crit_chance\"")
                     .define("globalCritChanceAttributeId", "elementalattackdamagecompat:global_crit_chance");
@@ -69,7 +69,7 @@ public class Config {
                     .define("globalCritDamageAttributeId", "elementalattackdamagecompat:global_crit_damage");
 
             MOD_COMPAT_SPELL_CRIT_CHANCE_ATTRIBUTE_ID = BUILDER
-                    .comment("\nThis is the id of an attribute that provides crit chance, but specifically for spells. " +
+                    .comment("This is the id of an attribute that provides crit chance, but specifically for spells. " +
                             "\nIf applyAttackCritAttributesGlobally is true, crit chance & crit damage from the above attributes will be added to these values when calculating damage." +
                             "\nDefault: \"elementalattackdamagecompat:spell_crit_chance\"")
                     .define("spellCritChanceAttributeId", "elementalattackdamagecompat:spell_crit_chance");
@@ -98,13 +98,16 @@ public class Config {
         
         BUILDER.push("Classify Types");
             TYPE_1_SCHOOLS = BUILDER
-                    .comment("Spells from schools in this list will be categorized into Type 1 and benefit from \"Type 1\" damage modifiers. Name customizable.")
+                    .comment("Spells from schools in this list will be categorized into Type 1 and benefit from \"Type 1\" damage modifiers. " +
+                            "\nCategory name is customizable by going to your lang file and using lang key: 'multipliers.type_1_damage.'")
                     .defineListAllowEmpty("type_1_schools", List.of("fire", "ice", "lightning"), Config::validateIsString);
             TYPE_2_SCHOOLS = BUILDER
-                    .comment("Spells from schools in this list will be categorized into Type 2 and benefit from \"Type 2\" damage modifiers. Name customizable.")
+                    .comment("Spells from schools in this list will be categorized into Type 2 and benefit from \"Type 2\" damage modifiers. " +
+                            "\nCategory name is customizable by going to your lang file and using lang key: 'multipliers.type_2_damage.'")
                     .defineListAllowEmpty("type_2_schools", List.of("holy", "ender", "eldritch"), Config::validateIsString);
             TYPE_3_SCHOOLS = BUILDER
-                    .comment("Spells from schools in this list will be categorized into Type 3 and benefit from \"Type 3\" damage modifiers. Name customizable.")
+                    .comment("Spells from schools in this list will be categorized into Type 3 and benefit from \"Type 3\" damage modifiers. " +
+                            "\nCategory name is customizable by going to your lang file and using lang key: 'multipliers.type_3_damage.'")
                     .defineListAllowEmpty("type_3_schools", List.of("blood", "nature", "evocation"), Config::validateIsString);
 
     }

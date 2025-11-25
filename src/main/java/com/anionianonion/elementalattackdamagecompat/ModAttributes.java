@@ -26,7 +26,7 @@ public interface ModAttributes {
     }
 
     /**
-     For a given living entity, try to get find an attribute and return its value based on a given key. Returns a -1 if not found.
+     For a given living entity, try to get find an attribute and return its value based on a given key. Returns null if not found.
      */
     static Float getAttributeValue(LivingEntity le, String key) {
 
@@ -34,7 +34,7 @@ public interface ModAttributes {
         Double value = getAttributeValue(le, attribute);
 
         if(value == null) return null;
-        else return value.floatValue();
+        return value.floatValue();
     }
 
     static Attribute getAttribute(String key) {
@@ -68,10 +68,12 @@ public interface ModAttributes {
         ATTRIBUTES_REGISTRY.register("global_crit_damage",
                 () -> new RangedAttribute("global.crit_damage", 1.5, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
 
-        ATTRIBUTES_REGISTRY.register("type_1",
+        ATTRIBUTES_REGISTRY.register("type_1_damage_multiplier",
                 () -> new RangedAttribute("multipliers.type_1_damage", 1, 0, Double.POSITIVE_INFINITY));
-        ATTRIBUTES_REGISTRY.register("type_2",
+        ATTRIBUTES_REGISTRY.register("type_2_damage_multiplier",
                 () -> new RangedAttribute("multipliers.type_2_damage", 1, 0, Double.POSITIVE_INFINITY));
+        ATTRIBUTES_REGISTRY.register("type_3_damage_multiplier",
+                () -> new RangedAttribute("multipliers.type_3_damage", 1, 0, Double.POSITIVE_INFINITY));
 
         RegistryObject<Attribute> SPELL_MULTIPLIER = ATTRIBUTES_REGISTRY.register("spell_damage_multiplier",
                 () -> new RangedAttribute("multipliers.spell_damage", 1, 0, Double.POSITIVE_INFINITY));

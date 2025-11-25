@@ -15,7 +15,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.ToolActions;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.HashMap;
 import java.util.List;
@@ -97,49 +96,47 @@ public class DamageManager {
     public static void manageArrowShot(LivingEntity livingAttacker, Arrow arrow,LivingHurtEvent e) {
         LivingEntity livingDefender = e.getEntity();
         float minecraftArrowBaseDamage = (float) arrow.getBaseDamage();
-        float newBaseFlatDamage = sumOfDamages(getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", minecraftArrowBaseDamage)));
+        float newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", minecraftArrowBaseDamage)));
         float flightSpeededAdjustedDamage = (float) (newBaseFlatDamage * arrow.getDeltaMovement().length()); //speed
-        float postCritAdjustedDamage = DamageManager.calculateCritArrow(arrow, livingAttacker, flightSpeededAdjustedDamage);
+        float postCritAdjustedDamage = calculateCritArrow(arrow, livingAttacker, flightSpeededAdjustedDamage);
 
         int roundedDamage = Math.round(postCritAdjustedDamage);
         e.setAmount(roundedDamage);
     }
     public static void manageMeleeAndOtherProjectiles(LivingEntity livingAttacker, Entity directEntity, DamageSource damageSource, LivingHurtEvent e) {
         float baseDamage = e.getAmount();
-        LivingEntity livingDefender = e.getEntity();
 
-        List<AttributeModifier> physAttackAddedDamageModifiers = livingAttacker.getAttribute(Attributes.ATTACK_DAMAGE).getModifiers()
+        //"physical" damage
+        Attribute attackAttribute = Attributes.ATTACK_DAMAGE;
+        List<AttributeModifier> addedAttackDamageModifiers = livingAttacker.getAttribute(attackAttribute).getModifiers()
                 .stream()
                 .filter(attributeModifier -> attributeModifier.getOperation() == AttributeModifier.Operation.ADDITION)
                 .toList();
-
-        float baseAttackDamage = (float) livingAttacker.getAttribute(Attributes.ATTACK_DAMAGE).getBaseValue();
-        for(AttributeModifier attributeModifier: physAttackAddedDamageModifiers) {
-            baseAttackDamage += (float) attributeModifier.getAmount();
+        float baseAddedPhys = 0;
+        for(AttributeModifier attributeModifier : addedAttackDamageModifiers) {
+            baseAddedPhys += (float) attributeModifier.getAmount();
         }
 
-        float expectedBaseDamage = baseAttackDamage;
-        boolean vanillaCritApplied = baseDamage > expectedBaseDamage;
+        float expectedBaseDamage = (float) livingAttacker.getAttribute(attackAttribute).getBaseValue() + baseAddedPhys;
+        if(baseDamage > expectedBaseDamage) baseDamage = expectedBaseDamage; //stops crit damage from other mods from being applied twice
 
-        float substitute = baseDamage;
-        if(vanillaCritApplied) substitute = baseDamage / 1.5f;
+        LivingEntity livingDefender = e.getEntity();
 
-        float newBaseFlatDamage = sumOfDamages(getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", substitute)));
-
+        float newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", baseDamage)));
 
         //----MELEE---- ONLY FOR PLAYERS
         if(livingAttacker instanceof Player player && directEntity == player) {
 
-            float critAdjustedDamage = DamageManager.calculateMeleeCrit(player, newBaseFlatDamage);
+            float critAdjustedDamage = calculateMeleeCrit(player, newBaseFlatDamage);
             ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
 
             if(itemStack.canPerformAction(ToolActions.SWORD_SWEEP)) {
-                List<LivingEntity> nearbyEnemies = DamageManager.getNearbyEnemies(player, livingDefender);
-                int sweepingLevel = DamageManager.getSweepingLevelOfPlayerWeapon(player);
-                performSweepingAttack(sweepingLevel, critAdjustedDamage, damageSource, nearbyEnemies, e);
+                List<LivingEntity> nearbyEnemies = getNearbyEnemies(player, livingDefender);
+                int sweepingLevel = getSweepingLevelOfPlayerWeapon(player);
+                performSweepingAttack(sweepingLevel, critAdjustedDamage, damageSource, nearbyEnemies, e); //baseDamage
             }
             else {
-                int roundedDamage = Math.round(critAdjustedDamage);
+                int roundedDamage = Math.round(critAdjustedDamage); //remember that base damage already checks for crit.
                 e.setAmount(roundedDamage);
             }
         }
@@ -149,11 +146,11 @@ public class DamageManager {
             float critAdjustedDamage;
             //MELEE (NON-PLAYERS)
             if(directEntity == livingAttacker) {
-                critAdjustedDamage = DamageManager.calculateMeleeCrit(livingAttacker, newBaseFlatDamage);
+                critAdjustedDamage = calculateMeleeCrit(livingAttacker, newBaseFlatDamage);
             }
             //RANGED: OTHER PROJECTILES
             else {
-                critAdjustedDamage = DamageManager.simpleCritRoll(livingAttacker, false, newBaseFlatDamage);
+                critAdjustedDamage = calculatePostCritDamage(livingAttacker, false, newBaseFlatDamage);
             }
             int roundedDamage = Math.round(critAdjustedDamage);
             e.setAmount(roundedDamage);
@@ -163,19 +160,11 @@ public class DamageManager {
     public static float calculateCritArrow(Arrow arrow, LivingEntity livingAttacker, float preCritDamage) {
         //vanilla MC assumes that a fully charged bow or crossbow will automatically crit.
         if(arrow.isCritArrow() && Config.disableVanillaFullyChargedBowCrit) {
-            arrow.setCritArrow(rollForIfAttacksCrit(livingAttacker));
+            arrow.setCritArrow(rollForIfAttacksOrSpellsCrit(livingAttacker, false));
         }
-        Float critChance, critDamage;
-        HashMap<String, Float> critData = getCritData(livingAttacker, false);
-        critChance = critData.get("crit_chance");
-
-        float critRoll = (float) Math.random();
-        if(critChance > critRoll) {
-            arrow.setCritArrow(true);
-        }
+        Float critDamage;
+        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, false);
         critDamage = critData.get("crit_damage");
-
-        arrow.setCritArrow(DamageManager.rollForIfAttacksCrit(livingAttacker));
 
         float postCritDamage = preCritDamage;
         if(arrow.isCritArrow()) {
@@ -185,7 +174,7 @@ public class DamageManager {
     }
     public static float calculateMeleeCrit(LivingEntity livingAttacker, float preCritDamage) {
 
-        HashMap<String, Float> critData = getCritData(livingAttacker, false);
+        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, false);
         Float critDamage = critData.get("crit_damage");
 
         float postCritDamage;
@@ -193,28 +182,26 @@ public class DamageManager {
             postCritDamage = preCritDamage * critDamage;
         }
         else {
-            postCritDamage = simpleCritRoll(livingAttacker, false, preCritDamage);
+            postCritDamage = calculatePostCritDamage(livingAttacker, false, preCritDamage);
         }
         return postCritDamage;
     }
-    public static float getPostCritDamage(LivingEntity livingAttackerOrCaster, boolean isSpell, float preCritDamage) {
+    public static float calculatePostCritDamage(LivingEntity livingAttackerOrCaster, boolean isSpell, float preCritDamage) {
         float postCritDamage = preCritDamage;
 
-        Float critChance, critDamage;
-        HashMap<String, Float> critData = getCritData(livingAttackerOrCaster, isSpell);
-        critChance = critData.get("crit_chance");
+        Float critDamage;
+        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttackerOrCaster, isSpell);
         critDamage = critData.get("crit_damage");
 
-        float critRoll = (float) Math.random();
-        if(critChance >= critRoll) {
+        if(rollForIfAttacksOrSpellsCrit(livingAttackerOrCaster, isSpell)) {
             postCritDamage = preCritDamage * critDamage;
         }
         return postCritDamage;
     }
 
-    public static boolean rollForIfAttacksCrit(LivingEntity livingAttacker) {
+    public static boolean rollForIfAttacksOrSpellsCrit(LivingEntity livingAttacker, boolean isSpell) {
         Float critChance;
-        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, false);
+        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, isSpell);
         critChance = critData.get("crit_chance");
 
         float critRoll = (float) Math.random();
