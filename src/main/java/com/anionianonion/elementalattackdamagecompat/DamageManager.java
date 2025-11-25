@@ -211,6 +211,16 @@ public class DamageManager {
         }
         return postCritDamage;
     }
+
+    public static boolean rollForIfAttacksCrit(LivingEntity livingAttacker) {
+        Float critChance;
+        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, false);
+        critChance = critData.get("crit_chance");
+
+        float critRoll = (float) Math.random();
+        return critChance >= critRoll;
+    }
+
     public static float sumOfDamages(HashMap<String, Float> elementalData) {
         float sum = 0f;
         for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
