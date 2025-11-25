@@ -38,7 +38,7 @@ public class EventHandler {
     protected static Float cc = 0.05f;
     protected static Float cd = 1.5f;
 
-    @SubscribeEvent
+    @SubscribeEvent(priority=EventPriority.LOWEST)
     public static void attacks(LivingHurtEvent e) {
 
         DamageSource damageSource = e.getSource();
