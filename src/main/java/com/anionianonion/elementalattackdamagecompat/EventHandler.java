@@ -14,6 +14,7 @@ import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.ItemAttributeModifierEvent;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -31,18 +32,17 @@ public class EventHandler {
     protected static Float cc = 0.05f;
     protected static Float cd = 1.5f;
 
-    @SubscribeEvent(priority=EventPriority.LOWEST)
+    @SubscribeEvent(priority=EventPriority.HIGHEST)
     public static void attacks(LivingHurtEvent e) {
-
+        LivingEntity defender = e.getEntity();
         DamageSource damageSource = e.getSource();
-        if(DamageManager.hasFailedInitialChecks(damageSource)) return;
-
         LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
         var directEntity = damageSource.getDirectEntity();
 
+        if(DamageManager.hasFailedInitialChecks(damageSource)) return;
         //attacker
-            //melee & non-bow projectiles gets flat added damage (and 'increases', and 'more' multipliers), nothing else
-            //bow gets added damage (and 'increases', and 'more' multipliers), multiplied by speed in blocks/s
+        //melee & non-bow projectiles gets flat added damage (and 'increases', and 'more' multipliers), nothing else
+        //bow gets added damage (and 'increases', and 'more' multipliers), multiplied by speed in blocks/s
         //----RANGED----: BOWS & CROSSBOWS SPECIFICALLY
         if(directEntity instanceof Arrow arrow) {
             DamageManager.manageArrowShot(livingAttacker, arrow, e); //I need e in order to get the event to set the damage within the function
@@ -51,6 +51,12 @@ public class EventHandler {
         else if(livingAttacker == directEntity || directEntity instanceof AbstractArrow) {
             DamageManager.manageMeleeAndOtherProjectiles(livingAttacker, directEntity, damageSource, e); //ignore this warning, living attacker null check is in hasFailedInitialCheck(damageSource)
         }
+    }
+
+    @SubscribeEvent(priority=EventPriority.LOWEST)
+    public static void attackDamage(LivingDamageEvent e) {
+
+
     }
 
 

@@ -53,7 +53,8 @@ public class Config {
                             "\nDefault: \"elementalattackdamagecompat:attack_crit_damage\"")
                     .define("attackCritDamageAttributeId", "elementalattackdamagecompat:attack_crit_damage");
             APPLY_ATTACK_CRIT_ATTRIBUTES_GLOBALLY = BUILDER
-                    .comment("If you already have a global crit attribute you want to use, this option modifiers whether the two above crit attributes will also apply to spells, such as from Iron's Spells and Spellbooks. " +
+                    .comment("If you already have a global crit attribute you want to use, this option modifiers whether the two above crit attributes will also apply to spells, " +
+                            "\nsuch as from Iron's Spells and Spellbooks. " +
                             "If false, the crit attributes will only apply to attacks, and this mod will use its global attributes instead." +
                             "\nDefault: false")
                     .define("applyAttackCritAttributesGlobally", false);
@@ -61,7 +62,7 @@ public class Config {
             MOD_COMPAT_GLOBAL_CRIT_CHANCE_ATTRIBUTE_ID = BUILDER
                     .comment("If applyAttackCritAttributesGlobally is true, then this and the next option won't be used. " +
                             "\nThis attribute id gets the attribute used, and it will affect the crit chance of both attacks and spells." +
-                            "Default: \"elementalattackdamagecompat:global_crit_chance\"")
+                            "\nDefault: \"elementalattackdamagecompat:global_crit_chance\"")
                     .define("globalCritChanceAttributeId", "elementalattackdamagecompat:global_crit_chance");
             MOD_COMPAT_GLOBAL_CRIT_DAMAGE_ATTRIBUTE_ID = BUILDER
                     .comment("Same as the last one, but for crit damage instead." +
@@ -83,7 +84,8 @@ public class Config {
                             "\ntotal *attack* crit chance will be the sum of attack crit chance + this value." +
                             "\nif false: " +
                             "\n\ttotal *spell* crit chance will be the sum of global crit chance + spell crit chance + this value, and " +
-                            "\n\ttotal *attack* crit chance will be the sum of global crit chance + attack crit chance + this value.")
+                            "\n\ttotal *attack* crit chance will be the sum of global crit chance + attack crit chance + this value." +
+                            "\nDefault: 0 (a 1 means minus 100% flat crit chance)")
                     .defineInRange("modCompatCritChanceOffset", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
             MOD_COMPAT_CRIT_DAMAGE_OFFSET = BUILDER
                     .comment("if 'applyAttackCritAttributesGlobally' is true: total *spell* crit damage is the sum of the sum of attack crit damage + spell crit damage + this value." +
@@ -91,13 +93,13 @@ public class Config {
                             "\nif false: " +
                             "\n\ttotal *spell* crit damage will be the sum of global crit damage + spell crit damage + this value, and " +
                             "\n\ttotal *attack* crit damage will be the sum of global crit damage + attack crit damage + this value." +
-                            "\nDefault: -1 (minus 100% flat crit damage)")
+                            "\nDefault: 0 (a 1 means minus 100% flat crit damage)")
                     .defineInRange("modCompatCritDamageOffset", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
 
         BUILDER.pop();
         
         BUILDER.push("Classify Types");
-            BUILDER.comment("Spells from schools in this list will be categorized into Type 1, Type 2, and Type 3, and benefit from \"Type 1\", \"Type 2\", and \"Type 3\" damage modifiers respectively." +
+            BUILDER.comment("Spells from schools in these lists will be categorized into Type 1, Type 2, and Type 3, and benefit from \"Type 1\", \"Type 2\", and \"Type 3\" damage modifiers respectively." +
                 "\nCategory name is customizable by going to your lang file, and using 'multipliers.type_1_damage', 'multipliers.type_2_damage', and 'multipliers.type_3_damage'.");
             TYPE_1_SCHOOLS = BUILDER
                     .comment("Default list: [\"fire\", \"ice\", \"lightning\"]")

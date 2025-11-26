@@ -20,5 +20,44 @@
   "spell_damage.eldritch": "Eldritch Damage to Spells",
 
   "spell.crit_chance": "Spell Critical Strike Chance",
-  "spell.crit_damage": "Critical Strike Multiplier for Spell Damage"
+  "spell.crit_damage": "Critical Strike Multiplier for Spell Damage",
+  "attack.crit_chance": "Attack Critical Strike Chance",
+  "attack.crit_damage": "Critical Strike Multiplier for Attack Damage",
+  "global.crit_chance": "Global Critical Strike Chance",
+  "global.crit_damage": "Global Critical Strike Multiplier",
+
+  "multipliers.attack_damage": "Attack Damage",
+  "multipliers.spell_damage": "Spell Damage",
+
+  "multipliers.type_1_damage": "Primal Damage",
+  "multipliers.type_2_damage": "Vivid Damage",
+  "multipliers.type_3_damage": "Wild Damage",
+
+  "attribute.name.generic.attack_damage": "Physical Damage to Attacks",
+
+  "multipliers.attack_damage.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "multipliers.spell_damage.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "multipliers.type_1_damage.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "multipliers.type_2_damage.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "multipliers.type_3_damage.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+
+  "attack_damage.fire.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "attack_damage.ice.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "attack_damage.lightning.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "attack_damage.holy.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "attack_damage.ender.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "attack_damage.blood.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "attack_damage.evocation.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "attack_damage.nature.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "attack_damage.eldritch.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+
+  "spell_damage.fire.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "spell_damage.ice.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "spell_damage.lightning.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "spell_damage.holy.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "spell_damage.ender.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "spell_damage.blood.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "spell_damage.evocation.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "spell_damage.nature.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing).",
+  "spell_damage.eldritch.desc": "The value you see to the right is incomplete. Sum up each element's (base+added damage * total increased modifiers (aka. from attack/spell, specific element, and overall type) * total more modifiers (same thing)."
 }

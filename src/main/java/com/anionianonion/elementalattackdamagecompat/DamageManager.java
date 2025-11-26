@@ -5,8 +5,6 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.Attribute;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Arrow;
@@ -16,22 +14,18 @@ import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.ToolActions;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import static com.anionianonion.elementalattackdamagecompat.EventHandler.PROCESSING_CUSTOM_DAMAGE;
+import static java.lang.Math.max;
 
 public class DamageManager {
 
     public static boolean hasFailedInitialChecks(DamageSource damageSource) {
         if(ElementalAttackDamageCompatMod.IS_RANDOM_DAMAGE_MOD_ENABLED) return true; //don't calculate damage if the user has this mod, as the mod does this step instead.
-        if(PROCESSING_CUSTOM_DAMAGE.get()) {
-            System.out.println("Skipping: Processing custom damage");
-            return true; //prevents recursion with custom sweeping attack after adding elemental damage to it during calculation
-        }
 
         //if(damageSource.isIndirect()) return; //only affects arrows and not sweeping
+        if (damageSource.toString().contains("(sweeping)")) return true;
+
         var attacker = damageSource.getEntity();
         if(!(attacker instanceof LivingEntity)) return true;
 
@@ -50,8 +44,8 @@ public class DamageManager {
                 .filter(entity -> entity != player)
                 .filter(entity -> entity != attackedEntity)
                 .filter(entity -> !entity.isAlliedTo(player))
-                .filter(entity -> entity.distanceToSqr(player) < 9.0)
-                //todo: also filter enemies that can't be hurt
+                .filter(entity -> entity.distanceToSqr(player) < max(sweepingEdgeHitbox.maxX, sweepingEdgeHitbox.maxZ))
+                .filter(entity -> !entity.isInvulnerable())
                 .toList();
 
         return enemies;
@@ -69,7 +63,7 @@ public class DamageManager {
                 var enchantment = enchantments.getCompound(i);
                 var enchantmentName = enchantment.getString("Name");
 
-                if(enchantmentName.equals("Sweeping Edge")) {
+                if(enchantmentName.equals("minecraft:sweeping")) {
                     sweepingLevel = enchantment.getInt("Lvl");
                     break;
                 }
@@ -78,22 +72,25 @@ public class DamageManager {
         return sweepingLevel;
     }
     public static void performSweepingAttack(int sweepingLevel, float critAdjustedDamage, DamageSource damageSource, List<LivingEntity> nearbyEnemies, LivingHurtEvent e) {
-        e.setAmount(Math.round(critAdjustedDamage)); //main target
+        e.setAmount(Math.round(critAdjustedDamage));
 
-        //MC Sweeping Edge Damage formula
         float sweepingDamage = 1 + critAdjustedDamage * ((float) sweepingLevel / (sweepingLevel + 1));
         int roundedSweepingDamage = Math.round(sweepingDamage);
 
-        try {
-            PROCESSING_CUSTOM_DAMAGE.set(true);
-            //attackedEntity.hurt(damageSource, roundedTotalDamage);
-            nearbyEnemies.forEach(entity -> entity.hurt(damageSource, roundedSweepingDamage));
-        } finally {
-            PROCESSING_CUSTOM_DAMAGE.set(false);
-        }
+        // Create a sweeping-specific damage source
+        DamageSource sweepingSource = new DamageSource(damageSource.typeHolder(), damageSource.getDirectEntity()) {
+            @Override
+            public String toString() {
+                return damageSource + " (sweeping)";
+            }
+        };
+
+        nearbyEnemies.forEach(nearbyEnemy -> {
+          nearbyEnemy.hurt(sweepingSource, roundedSweepingDamage);
+        });
     }
 
-    public static void manageArrowShot(LivingEntity livingAttacker, Arrow arrow,LivingHurtEvent e) {
+    public static void manageArrowShot(LivingEntity livingAttacker, Arrow arrow, LivingHurtEvent e) {
         LivingEntity livingDefender = e.getEntity();
         float minecraftArrowBaseDamage = (float) arrow.getBaseDamage();
         float newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", minecraftArrowBaseDamage)));
@@ -104,24 +101,13 @@ public class DamageManager {
         e.setAmount(roundedDamage);
     }
     public static void manageMeleeAndOtherProjectiles(LivingEntity livingAttacker, Entity directEntity, DamageSource damageSource, LivingHurtEvent e) {
+
         float baseDamage = e.getAmount();
-
-        //"physical" damage
-        Attribute attackAttribute = Attributes.ATTACK_DAMAGE;
-        List<AttributeModifier> addedAttackDamageModifiers = livingAttacker.getAttribute(attackAttribute).getModifiers()
-                .stream()
-                .filter(attributeModifier -> attributeModifier.getOperation() == AttributeModifier.Operation.ADDITION)
-                .toList();
-        float baseAddedPhys = 0;
-        for(AttributeModifier attributeModifier : addedAttackDamageModifiers) {
-            baseAddedPhys += (float) attributeModifier.getAmount();
-        }
-
-        float expectedBaseDamage = (float) livingAttacker.getAttribute(attackAttribute).getBaseValue() + baseAddedPhys;
-        if(baseDamage > expectedBaseDamage) baseDamage = expectedBaseDamage; //stops crit damage from other mods from being applied twice
-
         LivingEntity livingDefender = e.getEntity();
 
+        //"physical" damage
+        float expectedBaseDamage = AttributeHelpers.getBaseTotal(livingAttacker, Attributes.ATTACK_DAMAGE);
+        if(baseDamage > expectedBaseDamage) baseDamage = expectedBaseDamage; //stops crit damage from other mods from being applied twice
         float newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", baseDamage)));
 
         //----MELEE---- ONLY FOR PLAYERS
@@ -143,6 +129,7 @@ public class DamageManager {
         //---RANGED---: OTHER PROJECTILES (PLAYERS AND NON-PLAYERS)
         //and ---MELEE---(NON-PLAYERS)
         else {
+
             float critAdjustedDamage;
             //MELEE (NON-PLAYERS)
             if(directEntity == livingAttacker) {
@@ -150,6 +137,8 @@ public class DamageManager {
             }
             //RANGED: OTHER PROJECTILES
             else {
+                baseDamage = e.getAmount();
+                newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", baseDamage)));
                 critAdjustedDamage = calculatePostCritDamage(livingAttacker, false, newBaseFlatDamage);
             }
             int roundedDamage = Math.round(critAdjustedDamage);
