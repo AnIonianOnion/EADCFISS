@@ -4,6 +4,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import org.w3c.dom.Attr;
 
 import java.util.HashMap;
 import java.util.List;
@@ -218,52 +219,55 @@ public class AttributeHelpers {
     public static HashMap<String, Float> getCritData(LivingEntity livingAttackerOrCaster, boolean isSpell) {
 
         HashMap<String, Float> critData = new HashMap<>();
-        Float critChance, critDamage;
+        Attribute critChance, critDamage, secondaryCritChance, secondaryCritDamage;
+        Float critChanceBaseAmount, critDamageBaseAmount, secondaryCritChanceBaseAmount, secondaryCritDamageBaseAmount;
+        Float critChanceNetIncreaseAmount, critDamageNetIncreaseAmount;
+        Float critChanceEffectiveMoreAmount, critDamageEffectiveMoreAmount;
 
+        //sets the sources of critChance and critDamage, and secondary critChance and critDamage.
         if(isSpell) {
-            critChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.spellCritChanceAttributeId);
-            if(critChance == null) critChance = EventHandler.cc;
-            critDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.spellCritDamageAttributeId);
-            if(critDamage == null) critDamage = EventHandler.cd;
+            critChance = ModAttributes.getAttribute(Config.spellCritChanceAttributeId);
+            critDamage = ModAttributes.getAttribute(Config.spellCritDamageAttributeId);
 
             if(Config.applyAttackCritAttributesGlobally) {
-                Float secondaryCritChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritChanceAttributeId);
-                if(secondaryCritChance == null) secondaryCritChance = 0f;
-                Float secondaryCritDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritDamageAttributeId);
-                if(secondaryCritDamage == null) secondaryCritDamage = 0f;
-
-                critChance += secondaryCritChance + (float) Config.modCompatCritChanceOffset;
-                critDamage += secondaryCritDamage + (float) Config.modCompatCritDamageOffset;
+                secondaryCritChance = ModAttributes.getAttribute(Config.attackCritChanceAttributeId);
+                secondaryCritDamage = ModAttributes.getAttribute(Config.attackCritChanceAttributeId);
             }
             else {
-                Float secondaryCritChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritChanceAttributeId);
-                if(secondaryCritChance == null) secondaryCritChance = 0f;
-                Float secondaryCritDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritDamageAttributeId);
-                if(secondaryCritDamage == null) secondaryCritDamage = 0f;
-
-                critChance += secondaryCritChance + (float) Config.modCompatCritChanceOffset;
-                critDamage += secondaryCritDamage + (float) Config.modCompatCritDamageOffset;
+                secondaryCritChance = ModAttributes.getAttribute(Config.globalCritChanceAttributeId);
+                secondaryCritDamage = ModAttributes.getAttribute(Config.globalCritChanceAttributeId);
             }
         }
         else {
-            critChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritChanceAttributeId);
-            if(critChance == null) critChance = EventHandler.cc;
-            critDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.attackCritDamageAttributeId);
-            if(critDamage == null) critDamage = EventHandler.cd;
+            critChance = ModAttributes.getAttribute(Config.attackCritChanceAttributeId);
+            critDamage = ModAttributes.getAttribute(Config.attackCritDamageAttributeId);
 
             if(!Config.applyAttackCritAttributesGlobally) {
-                Float secondaryCritChance = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritChanceAttributeId);
-                if(secondaryCritChance == null) secondaryCritChance = 0f;
-                Float secondaryCritDamage = ModAttributes.getAttributeValue(livingAttackerOrCaster, Config.globalCritDamageAttributeId);
-                if(secondaryCritDamage == null) secondaryCritDamage = 0f;
-
-                critChance += secondaryCritChance + (float) Config.modCompatCritChanceOffset;
-                critDamage += secondaryCritDamage + (float) Config.modCompatCritDamageOffset;
+                secondaryCritChance = ModAttributes.getAttribute(Config.globalCritChanceAttributeId);
+                secondaryCritDamage = ModAttributes.getAttribute(Config.globalCritChanceAttributeId);
+            }
+            else {
+                secondaryCritChance = null;
+                secondaryCritDamage = null;
             }
         }
+        critChanceBaseAmount = getBaseTotal(livingAttackerOrCaster, critChance);
+        critDamageBaseAmount = getBaseTotal(livingAttackerOrCaster, critDamage);
 
-        critData.put("crit_chance", critChance);
-        critData.put("crit_damage", critDamage);
+        secondaryCritChanceBaseAmount = getBaseTotal(livingAttackerOrCaster, secondaryCritChance);
+        secondaryCritDamageBaseAmount = getBaseTotal(livingAttackerOrCaster, secondaryCritDamage);
+
+        critChanceBaseAmount += secondaryCritChanceBaseAmount + (float) Config.modCompatCritChanceOffset;
+        critDamageBaseAmount += secondaryCritDamageBaseAmount + (float) Config.modCompatCritDamageOffset;
+
+        critChanceNetIncreaseAmount = getNetIncrease(livingAttackerOrCaster, critChance) + getNetIncrease(livingAttackerOrCaster, secondaryCritChance);
+        critDamageNetIncreaseAmount = getNetIncrease(livingAttackerOrCaster, critDamage) + getNetIncrease(livingAttackerOrCaster, secondaryCritDamage);
+
+        critChanceEffectiveMoreAmount = getEffectiveMore(livingAttackerOrCaster, critChance) + getEffectiveMore(livingAttackerOrCaster, secondaryCritChance);
+        critDamageEffectiveMoreAmount = getEffectiveMore(livingAttackerOrCaster, critDamage) + getEffectiveMore(livingAttackerOrCaster, secondaryCritDamage);
+
+        critData.put("crit_chance", critChanceBaseAmount * (1 + critChanceNetIncreaseAmount) * (1 + critChanceEffectiveMoreAmount));
+        critData.put("crit_damage", critDamageBaseAmount * (1 + critDamageNetIncreaseAmount) * (1 + critDamageEffectiveMoreAmount));
 
         return critData;
     }
