@@ -221,8 +221,8 @@ public class AttributeHelpers {
         HashMap<String, Float> critData = new HashMap<>();
         Attribute critChance, critDamage, secondaryCritChance, secondaryCritDamage;
         Float critChanceBaseAmount, critDamageBaseAmount, secondaryCritChanceBaseAmount, secondaryCritDamageBaseAmount;
-        Float critChanceNetIncreaseAmount, critDamageNetIncreaseAmount;
-        Float critChanceEffectiveMoreAmount, critDamageEffectiveMoreAmount;
+        float critChanceNetIncreaseAmount, critDamageNetIncreaseAmount;
+        float critChanceEffectiveMoreAmount, critDamageEffectiveMoreAmount;
 
         //sets the sources of critChance and critDamage, and secondary critChance and critDamage.
         if(isSpell) {
@@ -231,11 +231,11 @@ public class AttributeHelpers {
 
             if(Config.applyAttackCritAttributesGlobally) {
                 secondaryCritChance = ModAttributes.getAttribute(Config.attackCritChanceAttributeId);
-                secondaryCritDamage = ModAttributes.getAttribute(Config.attackCritChanceAttributeId);
+                secondaryCritDamage = ModAttributes.getAttribute(Config.attackCritDamageAttributeId);
             }
             else {
                 secondaryCritChance = ModAttributes.getAttribute(Config.globalCritChanceAttributeId);
-                secondaryCritDamage = ModAttributes.getAttribute(Config.globalCritChanceAttributeId);
+                secondaryCritDamage = ModAttributes.getAttribute(Config.globalCritDamageAttributeId);
             }
         }
         else {
@@ -244,7 +244,7 @@ public class AttributeHelpers {
 
             if(!Config.applyAttackCritAttributesGlobally) {
                 secondaryCritChance = ModAttributes.getAttribute(Config.globalCritChanceAttributeId);
-                secondaryCritDamage = ModAttributes.getAttribute(Config.globalCritChanceAttributeId);
+                secondaryCritDamage = ModAttributes.getAttribute(Config.globalCritDamageAttributeId);
             }
             else {
                 secondaryCritChance = null;
