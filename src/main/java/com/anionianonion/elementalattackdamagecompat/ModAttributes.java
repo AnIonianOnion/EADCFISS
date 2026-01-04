@@ -15,7 +15,10 @@ import java.util.*;
 public interface ModAttributes {
 
     DeferredRegister<Attribute> ATTRIBUTES_REGISTRY = DeferredRegister.create(ForgeRegistries.ATTRIBUTES, ElementalAttackDamageCompatMod.MOD_ID);
-    List<String> ELEMENTAL_ATTRIBUTE_NAMES = List.of("fire", "ice", "lightning", "holy", "ender", "blood", "evocation", "nature", "eldritch");
+    List<String> ELEMENTAL_ATTRIBUTE_NAMES = List.of("fire", "ice", "lightning", "holy", "ender", "blood", "evocation", "nature", "eldritch", "sound", "geo", "aqua", "technomancy", "abyssal");
+
+    int numTypes = 5;
+    Map<String, String> customSchoolToResistAttributeKey = new HashMap<>();
 
     //based on https://www.youtube.com/watch?v=0gVO99YtaxE&t=5m48s&ab_channel=Kapitencraft
     //Changed -1 to null for more control, in case attribute values are negative.
@@ -68,12 +71,11 @@ public interface ModAttributes {
         ATTRIBUTES_REGISTRY.register("global_crit_damage",
                 () -> new RangedAttribute("global.crit_damage", 1.5, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
 
-        ATTRIBUTES_REGISTRY.register("type_1_damage_multiplier",
-                () -> new RangedAttribute("multipliers.type_1_damage", 1, 0, Double.POSITIVE_INFINITY));
-        ATTRIBUTES_REGISTRY.register("type_2_damage_multiplier",
-                () -> new RangedAttribute("multipliers.type_2_damage", 1, 0, Double.POSITIVE_INFINITY));
-        ATTRIBUTES_REGISTRY.register("type_3_damage_multiplier",
-                () -> new RangedAttribute("multipliers.type_3_damage", 1, 0, Double.POSITIVE_INFINITY));
+        for(int i = 1; i <= numTypes; i++) {
+            int finalI = i;
+            ATTRIBUTES_REGISTRY.register(String.format("type_%s_damage_multiplier", i),
+                    () -> new RangedAttribute(String.format("multipliers.type_%s_damage", finalI), 1, 0, Double.POSITIVE_INFINITY));
+        }
 
         RegistryObject<Attribute> SPELL_MULTIPLIER = ATTRIBUTES_REGISTRY.register("spell_damage_multiplier",
                 () -> new RangedAttribute("multipliers.spell_damage", 1, 0, Double.POSITIVE_INFINITY));
@@ -81,5 +83,11 @@ public interface ModAttributes {
                 () -> new RangedAttribute("multipliers.attack_damage", 1, 0, Double.POSITIVE_INFINITY));
 
         ATTRIBUTES_REGISTRY.register(eventBus);
+
+        customSchoolToResistAttributeKey.put("sound", "alshanex_familiars:sound_magic_resist");
+        customSchoolToResistAttributeKey.put("geo", "gtbcs_geomancy_plus:geo_magic_resist");
+        customSchoolToResistAttributeKey.put("aqua", "traveloptics:aqua_magic_resist");
+        customSchoolToResistAttributeKey.put("technomancy", "cataclysm_spellbooks:technomancy_magic_resist");
+        customSchoolToResistAttributeKey.put("abyssal", "cataclysm_spellbooks:abyssal_magic_resist");
     }
 }

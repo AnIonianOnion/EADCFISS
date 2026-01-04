@@ -27,9 +27,14 @@ public class DamageManager {
         if (damageSource.toString().contains("(sweeping)")) return true;
 
         var attacker = damageSource.getEntity();
-        if(!(attacker instanceof LivingEntity)) return true;
+        if(!(attacker instanceof LivingEntity)) {
+            if(Config.enableDebugMode)
+                ElementalAttackDamageCompatMod.LOGGER.info(damageSource.type().toString());
+            return true;
+        }
 
         var directEntity = damageSource.getDirectEntity();
+        ElementalAttackDamageCompatMod.LOGGER.info(directEntity.toString());
         return directEntity instanceof AbstractMagicProjectile; //simplified from an if statement, because it is the last check, and we can directly return the value as a result.
     }
     public static List<LivingEntity> getNearbyEnemies(Player player, LivingEntity attackedEntity) {
@@ -112,7 +117,8 @@ public class DamageManager {
 
         //----MELEE---- ONLY FOR PLAYERS
         if(livingAttacker instanceof Player player && directEntity == player) {
-
+            if(Config.enableDebugMode)
+                ElementalAttackDamageCompatMod.LOGGER.info("Melee player damage event fired");
             float critAdjustedDamage = calculateMeleeCrit(player, newBaseFlatDamage);
             ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
 
@@ -133,10 +139,14 @@ public class DamageManager {
             float critAdjustedDamage;
             //MELEE (NON-PLAYERS)
             if(directEntity == livingAttacker) {
+                if(Config.enableDebugMode)
+                    ElementalAttackDamageCompatMod.LOGGER.info("Other melee damage event fired");
                 critAdjustedDamage = calculateMeleeCrit(livingAttacker, newBaseFlatDamage);
             }
             //RANGED: OTHER PROJECTILES
             else {
+                if(Config.enableDebugMode)
+                    ElementalAttackDamageCompatMod.LOGGER.info("Other projectiles damage event fired");
                 baseDamage = e.getAmount();
                 newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", baseDamage)));
                 critAdjustedDamage = calculatePostCritDamage(livingAttacker, false, newBaseFlatDamage);

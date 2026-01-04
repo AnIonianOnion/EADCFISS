@@ -4,7 +4,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import org.w3c.dom.Attr;
 
 import java.util.HashMap;
 import java.util.List;
@@ -67,6 +66,18 @@ public class AttributeHelpers {
         }
         return baseElementalData;
     }
+    public static List<String> getSchoolType(int type) {
+        return switch (type) {
+            case 1 -> Config.type1schools;
+            case 2 -> Config.type2schools;
+            case 3 -> Config.type3schools;
+            case 4 -> Config.type4schools;
+            case 5 -> Config.type5schools;
+            default -> throw new IllegalArgumentException(
+                    String.format("There are only %s parent types of schools. You tried getting the overarching type for %s, which doesn't exist in getSchoolTypes(), or is out of bounds.",
+                            ModAttributes.numTypes, type));
+        };
+    }
     public static HashMap<String, Float> getElementalIncreasesAndDecreasesData(LivingEntity livingAttacker, boolean isSpell) {
         HashMap<String, Float> elementalIncreasesAndDecreasesData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_BASE);
 
@@ -75,6 +86,7 @@ public class AttributeHelpers {
             elementalIncreasesAndDecreasesData.put("physical", netIncreasePhysicalMultiplier);
         }
 
+        /*
         float type1SchoolNetIncrease = getNetIncrease(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_1_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
         for(String spellSchool : Config.type1schools) {
             if(elementalIncreasesAndDecreasesData.containsKey(spellSchool)) {
@@ -101,6 +113,18 @@ public class AttributeHelpers {
                         elementalIncreasesAndDecreasesData.get(spellSchool) + type3SchoolNetIncrease);
             }
         }
+        */
+
+        for(int i = 1; i <= ModAttributes.numTypes; i++) {
+            float type_i_SchoolNetIncrease = getNetIncrease(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, i)));
+            for(String spellSchool : getSchoolType(i)) {
+                if(elementalIncreasesAndDecreasesData.containsKey(spellSchool)) {
+                    elementalIncreasesAndDecreasesData.replace(
+                            spellSchool,
+                            elementalIncreasesAndDecreasesData.get(spellSchool) + type_i_SchoolNetIncrease);
+                }
+            }
+        }
 
         String spellOrAttack = isSpell ? "spell" : "attack";
         Attribute spellOrAttackAttribute = ModAttributes.getAttribute(String.format("%s:%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, spellOrAttack));
@@ -109,6 +133,7 @@ public class AttributeHelpers {
 
         return elementalIncreasesAndDecreasesData;
     }
+
     public static HashMap<String, Float> getElementalMoreAndLessModifiersData(LivingEntity livingAttacker, boolean isSpell) {
         HashMap<String, Float> elementalMoreAndLessModifiersData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_TOTAL);
 
@@ -117,6 +142,7 @@ public class AttributeHelpers {
             elementalMoreAndLessModifiersData.put("physical", effectiveMorePhysMultiplier);
         }
 
+        /*
         float type1SchoolEffectiveMoreMultiplier = 1 + getEffectiveMore(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_1_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
         for(String spellSchool : Config.type1schools) {
             if(elementalMoreAndLessModifiersData.containsKey(spellSchool)) {
@@ -143,6 +169,18 @@ public class AttributeHelpers {
                         elementalMoreAndLessModifiersData.get(spellSchool) * type3SchoolEffectiveMoreMultiplier);
             }
         }
+        */
+
+        for(int i = 1; i <= ModAttributes.numTypes; i++) {
+            float type_i_SchoolEffectiveMoreMultiplier = 1 + getEffectiveMore(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, i)));
+            for(String spellSchool : getSchoolType(i)) {
+                if(elementalMoreAndLessModifiersData.containsKey(spellSchool)) {
+                    elementalMoreAndLessModifiersData.replace(
+                            spellSchool,
+                            elementalMoreAndLessModifiersData.get(spellSchool) * type_i_SchoolEffectiveMoreMultiplier);
+                }
+            }
+        }
 
         String spellOrAttack = isSpell ? "spell" : "attack";
         Attribute spellOrAttackAttribute = ModAttributes.getAttribute(String.format("%s:%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, spellOrAttack));
@@ -157,6 +195,10 @@ public class AttributeHelpers {
         for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
             //Enemy resistances
             Float elementalResistance = ModAttributes.getAttributeValue(livingDefender, String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName));
+            if(elementalResistance == null && ModAttributes.customSchoolToResistAttributeKey.containsKey(elementalAttributeName)) {
+                elementalResistance = ModAttributes.getAttributeValue(livingDefender, elementalAttributeName);
+            }
+
             if(elementalResistance == null) elementalResistance = 1f; //by default, what elemental resistances are.
 
             elementalResistanceData.put(elementalAttributeName, elementalResistance);

@@ -11,6 +11,7 @@ import java.util.List;
 @Mod.EventBusSubscriber(modid = ElementalAttackDamageCompatMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class Config {
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    private static final ForgeConfigSpec.BooleanValue ENABLE_DEBUG_MODE;
     private static final ForgeConfigSpec.BooleanValue COPY_WEAPONS_DEFAULT_ATTRIBUTES_TO_NEW_WEAPONS;
 
     private static final ForgeConfigSpec.BooleanValue DISABLE_VANILLA_FALLING_MELEE_CRIT;
@@ -20,7 +21,7 @@ public class Config {
     private static final ForgeConfigSpec.ConfigValue<String> MOD_COMPAT_SPELL_CRIT_CHANCE_ATTRIBUTE_ID, MOD_COMPAT_SPELL_CRIT_DAMAGE_ATTRIBUTE_ID;
     private static final ForgeConfigSpec.DoubleValue MOD_COMPAT_CRIT_CHANCE_OFFSET, MOD_COMPAT_CRIT_DAMAGE_OFFSET;
     private static final ForgeConfigSpec.BooleanValue APPLY_ATTACK_CRIT_ATTRIBUTES_GLOBALLY;
-    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> TYPE_1_SCHOOLS, TYPE_2_SCHOOLS, TYPE_3_SCHOOLS;
+    private static final ForgeConfigSpec.ConfigValue<List<? extends String>> TYPE_1_SCHOOLS, TYPE_2_SCHOOLS, TYPE_3_SCHOOLS, TYPE_4_SCHOOLS, TYPE_5_SCHOOLS;
 
 
     static {
@@ -31,6 +32,8 @@ public class Config {
                         "\nIf this setting is true, weapons' base damage and attack speed will be kept, when adding a new attribute." +
                         "\nDefault: true")
                 .define("copyWeaponsDefaultAttributesToNewWeapons", true);
+        ENABLE_DEBUG_MODE = BUILDER.define("enableDebugMode", false);
+
 
         BUILDER.push("Crit");
 
@@ -99,18 +102,24 @@ public class Config {
         BUILDER.pop();
         
         BUILDER.push("Classify Types");
-            BUILDER.comment("Spells from schools in these lists will be categorized into Type 1, Type 2, and Type 3, and benefit from \"Type 1\", \"Type 2\", and \"Type 3\" damage modifiers respectively." +
+            BUILDER.comment("Spells from schools in these lists will be categorized into Type 1, Type 2, and Type 3, ... and benefit from \"Type 1\", \"Type 2\", \"Type 3\", ... damage modifiers respectively." +
                 "\nCategory name is customizable by going to your lang file, and using 'multipliers.type_1_damage', 'multipliers.type_2_damage', and 'multipliers.type_3_damage'.");
             TYPE_1_SCHOOLS = BUILDER
-                    .comment("Default list: [\"fire\", \"ice\", \"lightning\"]")
-                    .defineListAllowEmpty("type_1_schools", List.of("fire", "ice", "lightning"), Config::validateIsString);
+                    .comment("Default list: [\"fire\", \"ice\", \"lightning\", \"geo\", \"aqua\"]")
+                    .defineListAllowEmpty("type_1_schools", List.of("fire", "ice", "lightning", "geo", "aqua"), Config::validateIsString);
             TYPE_2_SCHOOLS = BUILDER
-                    .comment("Default list: [\"holy\", \"ender\", \"eldritch\"]")
-                    .defineListAllowEmpty("type_2_schools", List.of("holy", "ender", "eldritch"), Config::validateIsString);
+                    .comment("Default list: [\"holy\", \"ender\", \"eldritch\", \"abyssal\"]")
+                    .defineListAllowEmpty("type_2_schools", List.of("holy", "ender", "eldritch", "abyssal"), Config::validateIsString);
             TYPE_3_SCHOOLS = BUILDER
                     .comment("Default list: [\"blood\", \"nature\", \"evocation\"]")
                     .defineListAllowEmpty("type_3_schools", List.of("blood", "nature", "evocation"), Config::validateIsString);
-
+            TYPE_4_SCHOOLS = BUILDER
+                    .comment("Default list: [\"sound\", \"technomancy\"]")
+                    .defineListAllowEmpty("type_4_schools", List.of("sound", "technomancy"), Config::validateIsString);
+            TYPE_5_SCHOOLS = BUILDER
+                    .comment("Default list: []")
+                    .defineListAllowEmpty("type_5_schools", List.of(), Config::validateIsString);
+        BUILDER.pop();
     }
 
     private static boolean validateIsString(Object object) {
@@ -127,12 +136,14 @@ public class Config {
     public static String globalCritChanceAttributeId, globalCritDamageAttributeId;
     public static String spellCritChanceAttributeId, spellCritDamageAttributeId;
     public static double modCompatCritChanceOffset, modCompatCritDamageOffset;
-    public static List<String> type1schools, type2schools, type3schools;
+    public static List<String> type1schools, type2schools, type3schools, type4schools, type5schools;
+    public static boolean enableDebugMode;
 
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event)
     {
         copyWeaponsDefaultAttributesToNewWeapons = COPY_WEAPONS_DEFAULT_ATTRIBUTES_TO_NEW_WEAPONS.get();
+        enableDebugMode = ENABLE_DEBUG_MODE.get();
 
         disableVanillaFallingCrit = DISABLE_VANILLA_FALLING_MELEE_CRIT.get();
         disableVanillaFullyChargedBowCrit = DISABLE_VANILLA_FULLY_CHARGED_BOW_CRIT.get();
@@ -148,6 +159,8 @@ public class Config {
         type1schools = new ArrayList<>(TYPE_1_SCHOOLS.get());
         type2schools = new ArrayList<>(TYPE_2_SCHOOLS.get());
         type3schools = new ArrayList<>(TYPE_3_SCHOOLS.get());
+        type4schools = new ArrayList<>(TYPE_4_SCHOOLS.get());
+        type5schools = new ArrayList<>(TYPE_5_SCHOOLS.get());
 
     }
 }

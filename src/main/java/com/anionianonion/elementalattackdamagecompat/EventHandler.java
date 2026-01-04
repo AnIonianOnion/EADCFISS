@@ -28,10 +28,6 @@ import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operati
 @Mod.EventBusSubscriber(modid = ElementalAttackDamageCompatMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class EventHandler {
 
-    protected static final ThreadLocal<Boolean> PROCESSING_CUSTOM_DAMAGE = ThreadLocal.withInitial(() -> false);
-    protected static Float cc = 0.05f;
-    protected static Float cd = 1.5f;
-
     @SubscribeEvent(priority=EventPriority.HIGHEST)
     public static void attacks(LivingHurtEvent e) {
         LivingEntity defender = e.getEntity();
@@ -52,13 +48,6 @@ public class EventHandler {
             DamageManager.manageMeleeAndOtherProjectiles(livingAttacker, directEntity, damageSource, e); //ignore this warning, living attacker null check is in hasFailedInitialCheck(damageSource)
         }
     }
-
-    @SubscribeEvent(priority=EventPriority.LOWEST)
-    public static void attackDamage(LivingDamageEvent e) {
-
-
-    }
-
 
     @SubscribeEvent
     public static void spells(SpellDamageEvent e) {
@@ -126,6 +115,4 @@ public class EventHandler {
             );
         }
     }
-
-
 }
