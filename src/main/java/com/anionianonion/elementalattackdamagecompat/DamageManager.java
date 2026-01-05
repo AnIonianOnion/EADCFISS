@@ -13,6 +13,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraftforge.common.ToolActions;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.fml.ModList;
 
 import java.util.*;
 
@@ -20,16 +21,21 @@ import static java.lang.Math.max;
 
 public class DamageManager {
 
+    //returns false if LivingHurtEvent is triggered by an "attack", aka. with a melee/ranged weapon.
     public static boolean hasFailedInitialChecks(DamageSource damageSource) {
         if(ElementalAttackDamageCompatMod.IS_RANDOM_DAMAGE_MOD_ENABLED) return true; //don't calculate damage if the user has this mod, as the mod does this step instead.
 
         //if(damageSource.isIndirect()) return; //only affects arrows and not sweeping
-        if (damageSource.toString().contains("(sweeping)")) return true;
+        if (damageSource.toString().contains("(sweeping)"))
+        {
+            ElementalAttackDamageCompatMod.LOGGER.info(damageSource.type().toString());
+            ElementalAttackDamageCompatMod.LOGGER.info("Sweeping damage found");
+            return true;
+        }
 
         var attacker = damageSource.getEntity();
+
         if(!(attacker instanceof LivingEntity)) {
-            if(Config.enableDebugMode)
-                ElementalAttackDamageCompatMod.LOGGER.info(damageSource.type().toString());
             return true;
         }
 
@@ -117,12 +123,17 @@ public class DamageManager {
 
         //----MELEE---- ONLY FOR PLAYERS
         if(livingAttacker instanceof Player player && directEntity == player) {
-            if(Config.enableDebugMode)
+            if(Config.enableDebugMode) {
+                ElementalAttackDamageCompatMod.LOGGER.info(damageSource.type().toString());
                 ElementalAttackDamageCompatMod.LOGGER.info("Melee player damage event fired");
+            }
+
             float critAdjustedDamage = calculateMeleeCrit(player, newBaseFlatDamage);
             ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
 
-            if(itemStack.canPerformAction(ToolActions.SWORD_SWEEP)) {
+            boolean isProjectWarDanceInstalled = ModList.get().isLoaded("projectwardance");
+            boolean isEpicFightInstalled = ModList.get().isLoaded("epicfight");
+            if(itemStack.canPerformAction(ToolActions.SWORD_SWEEP) && !(isEpicFightInstalled || isProjectWarDanceInstalled)) {
                 List<LivingEntity> nearbyEnemies = getNearbyEnemies(player, livingDefender);
                 int sweepingLevel = getSweepingLevelOfPlayerWeapon(player);
                 performSweepingAttack(sweepingLevel, critAdjustedDamage, damageSource, nearbyEnemies, e); //baseDamage
@@ -139,14 +150,19 @@ public class DamageManager {
             float critAdjustedDamage;
             //MELEE (NON-PLAYERS)
             if(directEntity == livingAttacker) {
-                if(Config.enableDebugMode)
+                if(Config.enableDebugMode) {
+                    ElementalAttackDamageCompatMod.LOGGER.info(damageSource.type().toString());
                     ElementalAttackDamageCompatMod.LOGGER.info("Other melee damage event fired");
+                }
+
                 critAdjustedDamage = calculateMeleeCrit(livingAttacker, newBaseFlatDamage);
             }
             //RANGED: OTHER PROJECTILES
             else {
-                if(Config.enableDebugMode)
+                if(Config.enableDebugMode) {
+                    ElementalAttackDamageCompatMod.LOGGER.info(damageSource.type().toString());
                     ElementalAttackDamageCompatMod.LOGGER.info("Other projectiles damage event fired");
+                }
                 baseDamage = e.getAmount();
                 newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", baseDamage)));
                 critAdjustedDamage = calculatePostCritDamage(livingAttacker, false, newBaseFlatDamage);
