@@ -53,6 +53,10 @@ public class AttributeHelpers {
             });
         }
 
+
+        Float genericSpellResistance = ModAttributes.getAttributeValue(livingDefender, "irons_spellbooks:spell_resist");
+        float hardcappedResist = 0.90f;
+        float hardflooredResist = -2f;
         for(Map.Entry<String, Float> entry : enemyElementalResistances.entrySet()) {
             result.compute(entry.getKey(), (key, value) -> {
                 Float postResistanceDamageMultiplier = enemyElementalResistances.get(key);
