@@ -425,7 +425,24 @@ public class AttributeHelpers {
         }
         return effectiveMore - 1;
     }
-    public static List<AttributeModifier> filterAttributeModifiersByOperation(LivingEntity livingEntity, Attribute attribute, AttributeModifier.Operation operation) {
+
+    //gets a list of schools based on the group #
+    public static List<String> getSchoolType(int type) {
+        return switch (type) {
+            case 1 -> Config.type1schools;
+            case 2 -> Config.type2schools;
+            case 3 -> Config.type3schools;
+            case 4 -> Config.type4schools;
+            case 5 -> Config.type5schools;
+            default -> throw new IllegalArgumentException(
+                    String.format("There are only %s parent types of schools. You tried getting the overarching type for %s, which doesn't exist in getSchoolTypes(), or is out of bounds.",
+                            ModAttributes.numTypes, type));
+        };
+    }
+
+
+    //generic, works with any attribute
+    private static List<AttributeModifier> filterAttributeModifiersByOperation(LivingEntity livingEntity, Attribute attribute, AttributeModifier.Operation operation) {
         return livingEntity.getAttribute(attribute)
                 .getModifiers()
                 .stream()
