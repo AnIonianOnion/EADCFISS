@@ -13,6 +13,7 @@ public class Config {
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
     private static final ForgeConfigSpec.BooleanValue ENABLE_DEBUG_MODE;
     private static final ForgeConfigSpec.BooleanValue COPY_WEAPONS_DEFAULT_ATTRIBUTES_TO_NEW_WEAPONS;
+    private static final ForgeConfigSpec.BooleanValue ROUND_FINAL_DAMAGE;
 
     private static final ForgeConfigSpec.BooleanValue DISABLE_VANILLA_FALLING_MELEE_CRIT;
     private static final ForgeConfigSpec.BooleanValue DISABLE_VANILLA_FULLY_CHARGED_BOW_CRIT;
