@@ -43,8 +43,8 @@ public class DamageManager {
         }
 
         var directEntity = damageSource.getDirectEntity();
-        ElementalAttackDamageCompatMod.LOGGER.info(directEntity.toString());
-        return directEntity instanceof AbstractMagicProjectile; //simplified from an if statement, because it is the last check, and we can directly return the value as a result.
+        if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.info("direct entity: " + directEntity.toString());
+        return damageSource instanceof SpellDamageSource; //simplified from an if statement, because it is the last check, and we can directly return the value as a result.
     }
     public static List<LivingEntity> getNearbyEnemies(Player player, LivingEntity attackedEntity) {
 
