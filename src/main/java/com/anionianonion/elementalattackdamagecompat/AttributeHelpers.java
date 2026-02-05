@@ -410,6 +410,11 @@ public class AttributeHelpers {
         }
         return netIncrease;
     }
+    /**
+     * @param livingEntity The living entity to check more/less multipliers from.
+     * @param attribute The attribute to check.
+     * @return effectiveMore as a Float from a percent notation converted to decimal. -0.1 is 10% less, 0 is the same (no more or less). 0.5 is 50% more, 1 is 100% more, 2 is 200% more and so on.
+     */
     public static Float getEffectiveMore(LivingEntity livingEntity, Attribute attribute) {
         float effectiveMore = 1;
         if(attribute != null && livingEntity.getAttribute(attribute) != null) {
