@@ -109,17 +109,12 @@ public class AttributeHelpers {
         return baseElementalDamageData;
 
     }
-    public static List<String> getSchoolType(int type) {
-        return switch (type) {
-            case 1 -> Config.type1schools;
-            case 2 -> Config.type2schools;
-            case 3 -> Config.type3schools;
-            case 4 -> Config.type4schools;
-            case 5 -> Config.type5schools;
-            default -> throw new IllegalArgumentException(
-                    String.format("There are only %s parent types of schools. You tried getting the overarching type for %s, which doesn't exist in getSchoolTypes(), or is out of bounds.",
-                            ModAttributes.numTypes, type));
-        };
+
+    public static HashMap<String, Float> getAddedElementalDamageData(LivingEntity livingAttacker, boolean isSpell) {
+
+        HashMap<String, Float> addedElementalData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.ADDITION);
+
+        return addedElementalData;
     }
     public static HashMap<String, Float> getElementalIncreasesAndDecreasesData(LivingEntity livingAttacker, boolean isSpell) {
         HashMap<String, Float> elementalIncreasesAndDecreasesData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_BASE);
