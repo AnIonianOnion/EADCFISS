@@ -59,7 +59,10 @@ public class AttributeHelpers {
     public static HashMap<String, Float> getBaseElementalDamageData(Map.Entry<String, Float> otherDamage) {
         HashMap<String, Float> baseElementalDamageData = new HashMap<>();
 
-        HashMap<String, Float> baseElementalData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.ADDITION);
+        for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
+            baseElementalDamageData.put(elementalAttributeName, 0f);
+        }
+
         if(ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES.contains(otherDamage.getKey())) {
             baseElementalData.put(
                     otherDamage.getKey(),
