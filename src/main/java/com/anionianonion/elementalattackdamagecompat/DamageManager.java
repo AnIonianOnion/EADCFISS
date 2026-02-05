@@ -1,6 +1,6 @@
 package com.anionianonion.elementalattackdamagecompat;
 
-import io.redspace.ironsspellbooks.entity.spells.AbstractMagicProjectile;
+import io.redspace.ironsspellbooks.damage.SpellDamageSource;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
