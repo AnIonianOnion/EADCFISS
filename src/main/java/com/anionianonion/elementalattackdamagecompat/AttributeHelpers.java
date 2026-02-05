@@ -124,35 +124,6 @@ public class AttributeHelpers {
             elementalIncreasesAndDecreasesData.put("physical", netIncreasePhysicalMultiplier);
         }
 
-        /*
-        float type1SchoolNetIncrease = getNetIncrease(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_1_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
-        for(String spellSchool : Config.type1schools) {
-            if(elementalIncreasesAndDecreasesData.containsKey(spellSchool)) {
-                elementalIncreasesAndDecreasesData.replace(
-                        spellSchool,
-                        elementalIncreasesAndDecreasesData.get(spellSchool) + type1SchoolNetIncrease);
-            }
-        }
-
-        float type2SchoolNetIncrease = getNetIncrease(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_2_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
-        for(String spellSchool : Config.type2schools) {
-            if(elementalIncreasesAndDecreasesData.containsKey(spellSchool)) {
-                elementalIncreasesAndDecreasesData.replace(
-                        spellSchool,
-                        elementalIncreasesAndDecreasesData.get(spellSchool) + type2SchoolNetIncrease);
-            }
-        }
-
-        float type3SchoolNetIncrease = getNetIncrease(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_3_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
-        for(String spellSchool : Config.type3schools) {
-            if(elementalIncreasesAndDecreasesData.containsKey(spellSchool)) {
-                elementalIncreasesAndDecreasesData.replace(
-                        spellSchool,
-                        elementalIncreasesAndDecreasesData.get(spellSchool) + type3SchoolNetIncrease);
-            }
-        }
-        */
-
         for(int i = 1; i <= ModAttributes.numTypes; i++) {
             float type_i_SchoolNetIncrease = getNetIncrease(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, i)));
             for(String spellSchool : getSchoolType(i)) {
