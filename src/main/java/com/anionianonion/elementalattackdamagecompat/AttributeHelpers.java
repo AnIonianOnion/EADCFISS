@@ -64,7 +64,7 @@ public class AttributeHelpers {
         }
 
         if(ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES.contains(otherDamage.getKey())) {
-            baseElementalData.put(
+            baseElementalDamageData.put(
                     otherDamage.getKey(),
                     baseElementalData.get(otherDamage.getKey()) + otherDamage.getValue()
             );
