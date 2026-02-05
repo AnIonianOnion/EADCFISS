@@ -21,7 +21,7 @@ public class AttributeHelpers {
         HashMap<String, Float> elementalMoreAndLessModifiers = getElementalMoreAndLessModifiersData(livingAttacker, isSpell);
         HashMap<String, Float> enemyElementalResistances = getElementalResistances(livingDefender);
 
-        HashMap<String, Float> result = new HashMap<>(baseDamage);
+        HashMap<String, Float> result = new HashMap<>(baseElementalDamageData);
         /*
         for(var entryB : mapB.entrySet()) {
             mapA.compute(entryB.getKey(), (keyA, valueA) -> {
