@@ -337,6 +337,11 @@ public class AttributeHelpers {
         }
         return base;
     }
+    /**
+     * @param livingEntity The living entity to check increase/decreases from.
+     * @param attribute The attribute to check.
+     * @return netIncrease as a Float from a percent notation converted to decimal. -0.1 is a 10% decrease, 0 is the same (no increase or decrease), 0.5 is a 50% increase, 1 is a 100% increase, 2 is a 200% increase and so on.
+     */
     public static Float getNetIncrease(LivingEntity livingEntity, Attribute attribute) {
         float netIncrease = 0;
         if(attribute != null && livingEntity.getAttribute(attribute) != null) {
