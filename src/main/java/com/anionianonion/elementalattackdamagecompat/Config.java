@@ -164,6 +164,6 @@ public class Config {
         type3schools = new ArrayList<>(TYPE_3_SCHOOLS.get());
         type4schools = new ArrayList<>(TYPE_4_SCHOOLS.get());
         type5schools = new ArrayList<>(TYPE_5_SCHOOLS.get());
-
+        roundFinalDamage = ROUND_FINAL_DAMAGE.get();
     }
 }
