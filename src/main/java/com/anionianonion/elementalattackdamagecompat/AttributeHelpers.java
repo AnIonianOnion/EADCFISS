@@ -59,8 +59,26 @@ public class AttributeHelpers {
         float hardflooredResist = -2f;
         for(Map.Entry<String, Float> entry : enemyElementalResistances.entrySet()) {
             result.compute(entry.getKey(), (key, value) -> {
-                Float postResistanceDamageMultiplier = enemyElementalResistances.get(key);
-                return value * postResistanceDamageMultiplier;
+                Float resistance = enemyElementalResistances.get(key);
+
+                Float softcappedElementalResist = ModAttributes.getAttributeValue(livingDefender, String.format("%s:%s_max_resistance", ElementalAttackDamageCompatMod.MOD_ID, key));
+                if(softcappedElementalResist == null) softcappedElementalResist = 0.5f;
+
+                float hardcappedOrSoftcappedResist = Math.min(softcappedElementalResist, hardcappedResist);
+
+                //todo: check default value of generic spell resist
+                //ttackOrSpellResistance stores the result of converting the damage reduction to a scale from 0 to 1, from 1 to 2.
+                //if it as an attack, we only take into account the elemental resistance. But if it's a spell, also add in additional generic spell resistance.
+                float attackOrSpellResistance = !isSpell ? resistance - 1 : (resistance - 1) + (genericSpellResistance - 1);
+                float cappedResistance = Math.min(attackOrSpellResistance, hardcappedOrSoftcappedResist);
+
+                float flooredResistance = Math.max(cappedResistance, hardflooredResist);
+                float clampedElementalResistance = flooredResistance; //because we set the softcap/hardcap (aka. max) and the hardfloor (aka. min), and only want the resist to be between these values
+
+                //verified formula
+                //let's say you deal 100 fire damage, and the enemy has 25% fire resist.
+                //then value is 100. flooredResistance is 0.25. So you deal 100 * (1 - .25) = 100 * 0.75 = 75 fire damage.
+                return value * (1 - clampedElementalResistance);
             });
         }
 
