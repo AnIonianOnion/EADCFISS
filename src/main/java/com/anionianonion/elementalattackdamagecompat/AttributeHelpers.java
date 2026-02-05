@@ -236,6 +236,7 @@ public class AttributeHelpers {
 
         for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
             //Enemy resistances
+            //this line deals with resistances from the main mod ISS
             Float elementalResistance = ModAttributes.getAttributeValue(livingDefender, String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName));
 
             //deals with custom school resistances from other mods, by registering it ourselves
