@@ -168,7 +168,7 @@ public class AttributeHelpers {
 
         return elementalMoreAndLessModifiersData;
     }
-    private static HashMap<String, Float> getElementalResistances(LivingEntity livingDefender) {
+    public static HashMap<String, Float> getElementalResistances(LivingEntity livingDefender) {
         HashMap<String, Float> elementalResistanceData = new HashMap<>();
 
         for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
