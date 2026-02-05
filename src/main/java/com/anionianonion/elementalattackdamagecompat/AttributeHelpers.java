@@ -15,7 +15,8 @@ public class AttributeHelpers {
     //ties everything together.
     public static HashMap<String, Float> getAllElementalData(LivingEntity livingAttacker, LivingEntity livingDefender, boolean isSpell, Map.Entry<String, Float> otherDamageData) {
 
-        HashMap<String, Float> baseDamage = getBaseElementalDamagesData(livingAttacker, isSpell, otherDamage);
+        HashMap<String, Float> baseElementalDamageData = getBaseElementalDamageData(otherDamageData);
+        HashMap<String, Float> elementalAddedDamageData = getAddedElementalDamageData(livingAttacker, isSpell);
         HashMap<String, Float> elementalIncreasesAndDecreases = getElementalIncreasesAndDecreasesData(livingAttacker, isSpell);
         HashMap<String, Float> elementalMoreAndLessModifiers = getElementalMoreAndLessModifiersData(livingAttacker, isSpell);
         HashMap<String, Float> enemyElementalResistances = getElementalResistances(livingDefender);
