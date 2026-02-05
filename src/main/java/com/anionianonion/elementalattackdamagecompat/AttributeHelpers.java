@@ -418,8 +418,8 @@ public class AttributeHelpers {
     public static Float getEffectiveMore(LivingEntity livingEntity, Attribute attribute) {
         float effectiveMore = 1;
         if(attribute != null && livingEntity.getAttribute(attribute) != null) {
-            List<AttributeModifier> increaseOrDecreaseDamageModifiers = filterAttributeModifiersByOperation(livingEntity, attribute, AttributeModifier.Operation.MULTIPLY_TOTAL);
-            for(AttributeModifier attributeModifier : increaseOrDecreaseDamageModifiers) {
+            List<AttributeModifier> moreOrLessDamageModifiers = filterAttributeModifiersByOperation(livingEntity, attribute, AttributeModifier.Operation.MULTIPLY_TOTAL);
+            for(AttributeModifier attributeModifier : moreOrLessDamageModifiers) {
                 effectiveMore *= 1 + (float) attributeModifier.getAmount();
             }
         }
