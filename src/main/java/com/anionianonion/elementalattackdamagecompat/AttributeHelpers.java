@@ -274,6 +274,7 @@ public class AttributeHelpers {
                 secondaryCritDamage = ModAttributes.getAttribute(Config.globalCritDamageAttributeId);
             }
         }
+        //not spell, so attack
         else {
             critChance = ModAttributes.getAttribute(Config.attackCritChanceAttributeId);
             critDamage = ModAttributes.getAttribute(Config.attackCritDamageAttributeId);
