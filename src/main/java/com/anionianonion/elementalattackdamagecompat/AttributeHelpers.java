@@ -72,7 +72,9 @@ public class AttributeHelpers {
         else {
             baseElementalDamageData.put(otherDamage.getKey(), otherDamage.getValue());
         }
-        return baseElementalData;
+
+        return baseElementalDamageData;
+
     }
     public static List<String> getSchoolType(int type) {
         return switch (type) {
