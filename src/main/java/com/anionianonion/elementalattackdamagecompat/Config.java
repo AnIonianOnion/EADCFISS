@@ -34,7 +34,9 @@ public class Config {
                         "\nDefault: true")
                 .define("copyWeaponsDefaultAttributesToNewWeapons", true);
         ENABLE_DEBUG_MODE = BUILDER.define("enableDebugMode", false);
-
+        ROUND_FINAL_DAMAGE = BUILDER
+                .comment("If true, elemental damage from ISS and this mod will be rounded to the nearest integer.")
+                .define("roundFinalDamage", false);
 
         BUILDER.push("Crit");
 
