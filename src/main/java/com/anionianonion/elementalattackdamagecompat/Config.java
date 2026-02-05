@@ -140,7 +140,7 @@ public class Config {
     public static String spellCritChanceAttributeId, spellCritDamageAttributeId;
     public static double modCompatCritChanceOffset, modCompatCritDamageOffset;
     public static List<String> type1schools, type2schools, type3schools, type4schools, type5schools;
-    public static boolean enableDebugMode;
+    public static boolean enableDebugMode, roundFinalDamage;
 
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event)
