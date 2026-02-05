@@ -308,7 +308,86 @@ public class AttributeHelpers {
         return critData;
     }
 
-    //other methods
+    /**
+     *Depending on operation, and if it's a spell or attack: gets hashmap detailing base added damage, increased/decreased damage, or more/less damage for the given attacker.
+     * @param livingAttacker LivingEntity to get attributes from.
+     * @param isSpell If true, this is considered spell damage. So grab data from spell attributes.
+     * @param operation ADDITION, MULTIPLY_BASE, MULTIPLY_TOTAL
+     * @return Hashmap containing data for base damage (including added modifiers), increased/decreased damage multiplier, and more/less damage multiplier.
+     */
+    private static HashMap<String, Float> getElementalDataForGivenOperation(LivingEntity livingAttacker, boolean isSpell, AttributeModifier.Operation operation) {
+
+        HashMap<String, Float> elementalData = new HashMap<>();
+
+        for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
+            List<AttributeModifier> attributeModifiers = filterSpecificElementalAttributeModifiersByOperation(livingAttacker, elementalAttributeName, isSpell, operation);
+
+            if(attributeModifiers != null) {
+
+                //For ADDITION AND MULTIPLY_BASES, each of these attribute modifier values are intended to be added together in their own set.
+                //The initial value of sum is equal to the identity value of multiplication, if operation is MULTIPLY_BASE,
+                // and equal to the identity value of addition, if operation is not MULTIPLY_BASE (aka. ADDITION)
+                if(operation == AttributeModifier.Operation.ADDITION || operation == AttributeModifier.Operation.MULTIPLY_BASE) {
+                    float sum = operation == AttributeModifier.Operation.MULTIPLY_BASE ? 1 : 0;
+                    for (var attributeModifier : attributeModifiers) {
+                        sum += (float) attributeModifier.getAmount();
+                    }
+                    elementalData.put(elementalAttributeName, sum);
+                }
+                else {
+                    //The initial value of product is equal to the identity value of multiplication
+                    float product = 1;
+                    for (var attributeModifier : attributeModifiers) {
+                        product *= (float) (1 + attributeModifier.getAmount());
+                    }
+                    elementalData.put(elementalAttributeName, product);
+                }
+            }
+            else {
+                switch (operation) {
+                    case ADDITION:
+                        elementalData.put(elementalAttributeName, 0f);
+                        break;
+                    case MULTIPLY_BASE:
+                    case MULTIPLY_TOTAL:
+                        elementalData.put(elementalAttributeName, 1f);
+                }
+            }
+        }
+        return elementalData;
+    }
+    private static List<AttributeModifier> filterSpecificElementalAttributeModifiersByOperation(LivingEntity livingAttacker, String elementalAttributeName, boolean isSpell, AttributeModifier.Operation operation) {
+        String spellOrAttack = isSpell ? "spell" : "attack";
+        //modifiers only apply to either attack or spell elemental attributes for this element, but not both.
+        Attribute eitherOrlementalDamageAttribute = ModAttributes.getAttribute(String.format("%s:%s_%s_damage", ElementalAttackDamageCompatMod.MOD_ID, elementalAttributeName, spellOrAttack));
+
+        Attribute elementalDamageAttributeForBoth = ModAttributes.getAttribute(String.format("%s:%s_damage", ElementalAttackDamageCompatMod.MOD_ID, elementalAttributeName));
+
+        if(eitherOrlementalDamageAttribute != null && livingAttacker.getAttribute(eitherOrlementalDamageAttribute) != null
+                && elementalDamageAttributeForBoth != null && livingAttacker.getAttribute(elementalDamageAttributeForBoth) != null) {
+
+            var a = livingAttacker.getAttribute(eitherOrlementalDamageAttribute).getModifiers()
+                    .stream()
+                    .filter(attribute -> attribute.getOperation() == operation)
+                    .toList();
+            var b = livingAttacker.getAttribute(elementalDamageAttributeForBoth).getModifiers()
+                    .stream()
+                    .filter(attribute -> attribute.getOperation() == operation)
+                    .toList();
+
+            var combined = Stream.concat(a.stream(), b.stream()).toList();
+            return combined;
+        }
+        return null;
+    }
+    //other methods that could work for any attribute, not just elemental ones from this mod.
+    /**
+     * @param livingEntity The living entity to check from.
+     * @param attribute The attribute to check.
+     * @return base as a Float (actual base + flat added).
+     * This value is intended to be used in the revised attribute modifier formula:
+     * getBaseTotal() * (1 + getNetIncrease()) * (1 + getEffectiveMore()).
+     */
     public static Float getBaseTotal(LivingEntity livingEntity, Attribute attribute) {
         float base = 0;
         if(attribute != null && livingEntity.getAttribute(attribute) != null) {
