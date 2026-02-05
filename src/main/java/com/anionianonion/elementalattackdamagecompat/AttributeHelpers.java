@@ -142,7 +142,6 @@ public class AttributeHelpers {
 
         return elementalIncreasesAndDecreasesData;
     }
-
     public static HashMap<String, Float> getElementalMoreAndLessModifiersData(LivingEntity livingAttacker, boolean isSpell) {
         HashMap<String, Float> elementalMoreAndLessModifiersData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_TOTAL);
 
