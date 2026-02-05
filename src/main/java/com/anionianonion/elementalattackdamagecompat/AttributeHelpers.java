@@ -70,7 +70,7 @@ public class AttributeHelpers {
             );
         }
         else {
-            baseElementalData.put(otherDamage.getKey(), otherDamage.getValue());
+            baseElementalDamageData.put(otherDamage.getKey(), otherDamage.getValue());
         }
         return baseElementalData;
     }
