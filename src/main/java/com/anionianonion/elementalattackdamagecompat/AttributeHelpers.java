@@ -238,7 +238,8 @@ public class AttributeHelpers {
             //Enemy resistances
             Float elementalResistance = ModAttributes.getAttributeValue(livingDefender, String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName));
             if(elementalResistance == null && ModAttributes.customSchoolToResistAttributeKey.containsKey(elementalAttributeName)) {
-                elementalResistance = ModAttributes.getAttributeValue(livingDefender, elementalAttributeName);
+                //todo: replace elementalAttributeName with ?
+                elementalResistance = ModAttributes.getAttributeValue(livingDefender, ModAttributes.customSchoolToResistAttributeKey.get(elementalAttributeName));
             }
 
             if(elementalResistance == null) elementalResistance = 1f; //by default, what elemental resistances are.
