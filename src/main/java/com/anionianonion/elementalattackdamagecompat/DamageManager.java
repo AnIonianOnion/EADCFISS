@@ -29,8 +29,10 @@ public class DamageManager {
         //if(damageSource.isIndirect()) return; //only affects arrows and not sweeping
         if (damageSource.toString().contains("(sweeping)"))
         {
-            ElementalAttackDamageCompatMod.LOGGER.info(damageSource.type().toString());
-            ElementalAttackDamageCompatMod.LOGGER.info("Sweeping damage found");
+            if(Config.enableDebugMode) {
+                ElementalAttackDamageCompatMod.LOGGER.info(damageSource.toString());
+                ElementalAttackDamageCompatMod.LOGGER.info("Sweeping damage found");
+            }
             return true;
         }
 
