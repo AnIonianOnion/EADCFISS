@@ -252,58 +252,6 @@ public class AttributeHelpers {
 
         return elementalResistanceData;
     }
-
-    private static List<AttributeModifier> filterSpecificElementalAttributeModifiersByOperation(LivingEntity livingAttacker, String elementalAttributeName, boolean isSpell, AttributeModifier.Operation operation) {
-        String spellOrAttack = isSpell ? "spell" : "attack";
-        Attribute elementalDamageAttribute = ModAttributes.getAttribute(String.format("%s:%s_%s_damage", ElementalAttackDamageCompatMod.MOD_ID, elementalAttributeName, spellOrAttack));
-
-        if(elementalDamageAttribute != null && livingAttacker.getAttribute(elementalDamageAttribute) != null) {
-            return livingAttacker.getAttribute(elementalDamageAttribute).getModifiers()
-                    .stream()
-                    .filter(attribute -> attribute.getOperation() == operation)
-                    .toList();
-        }
-        return null;
-    }
-
-    //depending on operation: gets hashmap detailing base added damage, increased/decreased damage, or more/less damage.
-    private static HashMap<String, Float> getElementalDataForGivenOperation(LivingEntity livingAttacker, boolean isSpell, AttributeModifier.Operation operation) {
-
-        HashMap<String, Float> elementalData = new HashMap<>();
-
-        for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
-            List<AttributeModifier> attributeModifiers = filterSpecificElementalAttributeModifiersByOperation(livingAttacker, elementalAttributeName, isSpell, operation);
-
-            if(attributeModifiers != null) {
-
-                if(operation == AttributeModifier.Operation.ADDITION || operation == AttributeModifier.Operation.MULTIPLY_BASE) {
-                    float sum = operation == AttributeModifier.Operation.MULTIPLY_BASE ? 1 : 0;
-                    for (var attributeModifier : attributeModifiers) {
-                        sum += (float) attributeModifier.getAmount();
-                    }
-                    elementalData.put(elementalAttributeName, sum);
-                }
-                else {
-                    float product = 1;
-                    for (var attributeModifier : attributeModifiers) {
-                        product *= (float) (1 + attributeModifier.getAmount());
-                    }
-                    elementalData.put(elementalAttributeName, product);
-                }
-            }
-            else {
-                switch (operation) {
-                    case ADDITION:
-                        elementalData.put(elementalAttributeName, 0f);
-                        break;
-                    case MULTIPLY_BASE:
-                    case MULTIPLY_TOTAL:
-                        elementalData.put(elementalAttributeName, 1f);
-                }
-            }
-        }
-        return elementalData;
-    }
     public static HashMap<String, Float> getCritData(LivingEntity livingAttackerOrCaster, boolean isSpell) {
 
         HashMap<String, Float> critData = new HashMap<>();
