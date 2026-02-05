@@ -31,6 +31,13 @@ public class AttributeHelpers {
         }
          */
 
+        float effectiveAddedDamageMultiplier = 1.0f;
+        for(Map.Entry<String, Float> entry : elementalAddedDamageData.entrySet()) {
+            result.compute(entry.getKey(), (key, value) -> {
+                Float addedBaseDamage = elementalAddedDamageData.get(key);
+                return value + addedBaseDamage * effectiveAddedDamageMultiplier;
+            });
+        }
 
         for(Map.Entry<String, Float> entry : elementalIncreasesAndDecreases.entrySet()) {
             result.compute(entry.getKey(), (key, value) -> {
