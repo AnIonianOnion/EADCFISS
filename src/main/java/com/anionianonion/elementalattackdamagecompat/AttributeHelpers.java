@@ -180,35 +180,6 @@ public class AttributeHelpers {
             elementalMoreAndLessModifiersData.put("physical", effectiveMorePhysMultiplier);
         }
 
-        /*
-        float type1SchoolEffectiveMoreMultiplier = 1 + getEffectiveMore(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_1_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
-        for(String spellSchool : Config.type1schools) {
-            if(elementalMoreAndLessModifiersData.containsKey(spellSchool)) {
-                elementalMoreAndLessModifiersData.replace(
-                        spellSchool,
-                        elementalMoreAndLessModifiersData.get(spellSchool) * type1SchoolEffectiveMoreMultiplier);
-            }
-        }
-
-        float type2SchoolEffectiveMoreMultiplier = 1 + getEffectiveMore(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_2_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
-        for(String spellSchool : Config.type2schools) {
-            if(elementalMoreAndLessModifiersData.containsKey(spellSchool)) {
-                elementalMoreAndLessModifiersData.replace(
-                        spellSchool,
-                        elementalMoreAndLessModifiersData.get(spellSchool) * type2SchoolEffectiveMoreMultiplier);
-            }
-        }
-
-        float type3SchoolEffectiveMoreMultiplier = 1 + getEffectiveMore(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_3_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID)));
-        for(String spellSchool : Config.type3schools) {
-            if(elementalMoreAndLessModifiersData.containsKey(spellSchool)) {
-                elementalMoreAndLessModifiersData.replace(
-                        spellSchool,
-                        elementalMoreAndLessModifiersData.get(spellSchool) * type3SchoolEffectiveMoreMultiplier);
-            }
-        }
-        */
-
         for(int i = 1; i <= ModAttributes.numTypes; i++) {
             float type_i_SchoolEffectiveMoreMultiplier = 1 + getEffectiveMore(livingAttacker, ModAttributes.getAttribute(String.format("%s:type_%s_damage_multiplier", ElementalAttackDamageCompatMod.MOD_ID, i)));
             for(String spellSchool : getSchoolType(i)) {
