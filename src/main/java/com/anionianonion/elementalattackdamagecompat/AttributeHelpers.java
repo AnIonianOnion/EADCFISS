@@ -52,7 +52,12 @@ public class AttributeHelpers {
 
         return result;
     }
-    public static HashMap<String, Float> getBaseElementalDamagesData(LivingEntity livingAttacker, boolean isSpell, Map.Entry<String, Float> otherDamage) {
+
+    /**
+    Creates a Hashmap containing the base damage dealt for every element. otherDamage is used to pass in data dealt by an attack or spell.
+     */
+    public static HashMap<String, Float> getBaseElementalDamageData(Map.Entry<String, Float> otherDamage) {
+        HashMap<String, Float> baseElementalDamageData = new HashMap<>();
 
         HashMap<String, Float> baseElementalData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.ADDITION);
         if(ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES.contains(otherDamage.getKey())) {
