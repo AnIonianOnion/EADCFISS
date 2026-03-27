@@ -93,7 +93,26 @@ public class EventHandler {
         if(ElementalAttackDamageCompatMod.IS_RANDOM_DAMAGE_MOD_ENABLED) return;
 
         SpellDamageSource spellDamageSource = e.getSpellDamageSource();
-        LivingEntity caster = (LivingEntity) spellDamageSource.get().getEntity();
+        DamageSource damageSource = spellDamageSource.get();
+        LivingEntity caster = (LivingEntity) damageSource.getEntity();
+
+        if(caster == null) {
+            if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.warn("caster is null");
+            return;
+        }
+
+        LivingEntity defender = e.getEntity();
+        var lastAttacker = defender.getLastAttacker();
+        if(Config.enableDebugMode) {
+            ElementalAttackDamageCompatMod.LOGGER.info("=====================");
+            ElementalAttackDamageCompatMod.LOGGER.info("lastAttacker: " + lastAttacker);
+            ElementalAttackDamageCompatMod.LOGGER.info("attacker's target: " + defender);
+            ElementalAttackDamageCompatMod.LOGGER.info("attacker is summon?: " + (lastAttacker instanceof MagicSummon));
+            ElementalAttackDamageCompatMod.LOGGER.info("attacker is summoned skele?: " + (lastAttacker instanceof SummonedSkeleton));
+            ElementalAttackDamageCompatMod.LOGGER.info("attacker is summoned zom?: " + (lastAttacker instanceof SummonedZombie));
+            ElementalAttackDamageCompatMod.LOGGER.info("=====================");
+        }
+
         var originalTotalDamage = e.getOriginalAmount();
         var spellSchool = spellDamageSource.spell().getSchoolType().getId().getPath();
 
