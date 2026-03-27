@@ -120,9 +120,26 @@ public class EventHandler {
         float baseTotalElementalDamage = DamageManager.sumOfDamages(AttributeHelpers.getAllElementalData(caster, defender, true, Map.entry(spellSchoolName, originalTotalDamage)));
         float critAdjustedDamage = DamageManager.calculatePostCritDamage(caster, true, baseTotalElementalDamage);
 
-        int roundedDamage = Math.round(critAdjustedDamage);
-        e.setAmount(roundedDamage);
-    }
+        Float spellSuppressionChance = ModAttributes.getAttributeValue(defender, String.format("%s:spell_suppression_chance", ElementalAttackDamageCompatMod.MOD_ID));
+        if(spellSuppressionChance == null) spellSuppressionChance = 0f;
+        Float spellSuppressionPrevented = ModAttributes.getAttributeValue(defender, String.format("%s:spell_suppression_prevented", ElementalAttackDamageCompatMod.MOD_ID));
+        if(spellSuppressionPrevented == null) spellSuppressionPrevented = 0.5f;
+
+        float roll = (float) Math.random();
+        float postSuppressionDamage = critAdjustedDamage;
+        if(spellSuppressionChance >= roll) postSuppressionDamage *= (1 - spellSuppressionPrevented);
+
+        float rounded = Math.round(postSuppressionDamage);
+        float preFinalDamage = Config.roundFinalDamage ? rounded : postSuppressionDamage;
+
+        if(Config.enableDebugMode) {
+            ElementalAttackDamageCompatMod.LOGGER.info(e.getEntity().toString());
+            if(caster instanceof ServerPlayer serverPlayer) {
+                serverPlayer.sendSystemMessage(Component.literal("Spell School: " + spellSchoolName));
+                serverPlayer.sendSystemMessage(Component.literal("Spell id: " + spellId));
+                serverPlayer.sendSystemMessage(Component.literal("PreFinal damage: " + preFinalDamage));
+            }
+        }
 
 
     //Goal: fix damage on weapons being overwritten when adding a nwe attribute if the weapon didn't have one before.
