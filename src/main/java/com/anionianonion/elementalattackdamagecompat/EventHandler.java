@@ -141,6 +141,8 @@ public class EventHandler {
             }
         }
 
+        e.setAmount(finalDamage);
+    }
 
     //Goal: fix damage on weapons being overwritten when adding a nwe attribute if the weapon didn't have one before.
     //For example, a diamond adds 6 extra attack damage, so you deal 7 damage total without crit.
