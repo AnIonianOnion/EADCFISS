@@ -130,7 +130,7 @@ public class EventHandler {
         if(spellSuppressionChance >= roll) postSuppressionDamage *= (1 - spellSuppressionPrevented);
 
         float rounded = Math.round(postSuppressionDamage);
-        float preFinalDamage = Config.roundFinalDamage ? rounded : postSuppressionDamage;
+        float finalDamage = Config.roundFinalDamage ? rounded : postSuppressionDamage;
 
         if(Config.enableDebugMode) {
             ElementalAttackDamageCompatMod.LOGGER.info(e.getEntity().toString());
