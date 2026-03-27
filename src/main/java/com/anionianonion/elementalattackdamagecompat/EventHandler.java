@@ -52,8 +52,7 @@ public class EventHandler {
 
 
     @SubscribeEvent(priority=EventPriority.HIGHEST)
-    public static void attacks(LivingHurtEvent e) {
-        LivingEntity defender = e.getEntity();
+    public static void onAttackDamage(LivingDamageEvent e) {
         DamageSource damageSource = e.getSource();
         LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
         var directEntity = damageSource.getDirectEntity();
