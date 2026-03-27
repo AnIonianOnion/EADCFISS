@@ -104,7 +104,11 @@ public class DamageManager {
         });
     }
 
-    public static void manageArrowShot(LivingEntity livingAttacker, Arrow arrow, LivingHurtEvent e) {
+    public static void manageArrowShot(LivingDamageEvent e) {
+        DamageSource damageSource = e.getSource();
+        LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
+        Arrow arrow = (Arrow) damageSource.getDirectEntity();
+
         LivingEntity livingDefender = e.getEntity();
         float minecraftArrowBaseDamage = (float) arrow.getBaseDamage();
         float newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", minecraftArrowBaseDamage)));
