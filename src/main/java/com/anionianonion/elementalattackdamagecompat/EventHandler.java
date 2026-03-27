@@ -114,7 +114,8 @@ public class EventHandler {
         }
 
         var originalTotalDamage = e.getOriginalAmount();
-        var spellSchool = spellDamageSource.spell().getSchoolType().getId().getPath();
+        var spellSchoolName = spellDamageSource.spell().getSchoolType().getId().getPath();
+        var spellId = e.getSpellDamageSource().spell().getSpellId();
 
         float baseTotalElementalDamage = DamageManager.sumOfDamages(AttributeHelpers.getAllElementalData(caster, e.getEntity(), true, Map.entry(spellSchool, originalTotalDamage)));
         float critAdjustedDamage = DamageManager.calculatePostCritDamage(caster, true, baseTotalElementalDamage);
