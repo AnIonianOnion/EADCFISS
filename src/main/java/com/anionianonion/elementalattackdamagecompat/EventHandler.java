@@ -137,7 +137,7 @@ public class EventHandler {
             if(caster instanceof ServerPlayer serverPlayer) {
                 serverPlayer.sendSystemMessage(Component.literal("Spell School: " + spellSchoolName));
                 serverPlayer.sendSystemMessage(Component.literal("Spell id: " + spellId));
-                serverPlayer.sendSystemMessage(Component.literal("PreFinal damage: " + preFinalDamage));
+                serverPlayer.sendSystemMessage(Component.literal("PreFinal damage: " + finalDamage));
             }
         }
 
