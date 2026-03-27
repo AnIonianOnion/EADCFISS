@@ -54,6 +54,10 @@ public class EventHandler {
     @SubscribeEvent(priority=EventPriority.HIGHEST)
     public static void onAttackDamage(LivingDamageEvent e) {
         DamageSource damageSource = e.getSource();
+
+        if(DamageManager.hasFailedInitialChecks(damageSource)) return;
+
+        //cast is safe, because we check that entity is instance of LivingEntity before casting within hasFailedInitialChecks.
         LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
         var directEntity = damageSource.getDirectEntity();
 
