@@ -70,8 +70,21 @@ public class EventHandler {
             DamageManager.manageArrowShot(e); //I need e in order to get the event to set the damage within the function
         }
         //---MELEE----     AND  ---RANGED---: OTHER PROJECTILES
-        else if(livingAttacker == directEntity || directEntity instanceof AbstractArrow) {
-            DamageManager.manageMeleeAndOtherProjectiles(livingAttacker, directEntity, damageSource, e); //ignore this warning, living attacker null check is in hasFailedInitialCheck(damageSource)
+        else if(livingAttacker == directEntity ||
+                    (directEntity instanceof Projectile && !(directEntity instanceof ThrowableItemProjectile))
+        ) {
+                DamageManager.manageMeleeAndOtherProjectiles(e);
+        }
+        //custom spell handler
+        else {
+                boolean isOtherSpell = false;
+                for(var otherSpellRegistryKey : DamageSourcesCompat.otherSpellDamageSources) {
+                    if(damageSource.is(otherSpellRegistryKey)) {
+                        isOtherSpell = true;
+                        break;
+                    }
+                }
+                if(isOtherSpell) DamageManager.manageOtherSpells(e);
         }
     }
 
