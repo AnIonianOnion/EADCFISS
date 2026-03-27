@@ -30,6 +30,27 @@ import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operati
 @Mod.EventBusSubscriber(modid = ElementalAttackDamageCompatMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class EventHandler {
 
+    @SubscribeEvent
+    public static void onHit(LivingAttackEvent e) {
+
+        DamageSource damageSource = e.getSource();
+        LivingEntity defender = e.getEntity();
+
+        //do not cast before checking.
+        Entity entity = damageSource.getEntity();
+        if(!(entity instanceof LivingEntity)) return;
+
+        if(damageSource instanceof SpellDamageSource) {
+
+            Float spellDodgeChance = ModAttributes.getAttributeValue(defender, String.format("%s:spell_dodge_chance", ElementalAttackDamageCompatMod.MOD_ID));
+            if(spellDodgeChance == null) spellDodgeChance = 0f;
+
+            float roll = (float) Math.random();
+            if(spellDodgeChance >= roll) e.setCanceled(true);
+        }
+    }
+
+
     @SubscribeEvent(priority=EventPriority.HIGHEST)
     public static void attacks(LivingHurtEvent e) {
         LivingEntity defender = e.getEntity();
