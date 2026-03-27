@@ -66,8 +66,8 @@ public class EventHandler {
         //melee & non-bow projectiles gets flat added damage (and 'increases', and 'more' multipliers), nothing else
         //bow gets added damage (and 'increases', and 'more' multipliers), multiplied by speed in blocks/s
         //----RANGED----: BOWS & CROSSBOWS SPECIFICALLY
-        if(directEntity instanceof Arrow arrow) {
-            DamageManager.manageArrowShot(livingAttacker, arrow, e); //I need e in order to get the event to set the damage within the function
+        if(directEntity instanceof Arrow) {
+            DamageManager.manageArrowShot(e); //I need e in order to get the event to set the damage within the function
         }
         //---MELEE----     AND  ---RANGED---: OTHER PROJECTILES
         else if(livingAttacker == directEntity || directEntity instanceof AbstractArrow) {
