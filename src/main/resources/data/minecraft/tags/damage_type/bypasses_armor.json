@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "elementalattackdamagecompat:ignite",
+    "elementalattackdamagecompat:bleed",
+    "elementalattackdamagecompat:poison"
+  ]
+}

@@ -1,5 +1,6 @@
 package com.anionianonion.elementalattackdamagecompat;
 
+import com.anionianonion.elementalattackdamagecompat.ailments.AilmentApplier;
 import io.redspace.ironsspellbooks.damage.SpellDamageSource;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
@@ -85,7 +86,7 @@ public class DamageManager {
         }
         return sweepingLevel;
     }
-    public static void performSweepingAttack(int sweepingLevel, float critAdjustedDamage, DamageSource damageSource, List<LivingEntity> nearbyEnemies, LivingHurtEvent e) {
+    public static void performSweepingAttack(int sweepingLevel, float critAdjustedDamage, DamageSource damageSource, List<LivingEntity> nearbyEnemies, LivingDamageEvent e) {
         e.setAmount(Math.round(critAdjustedDamage));
 
         float sweepingDamage = 1 + critAdjustedDamage * ((float) sweepingLevel / (sweepingLevel + 1));
@@ -107,128 +108,185 @@ public class DamageManager {
     public static void manageArrowShot(LivingDamageEvent e) {
         DamageSource damageSource = e.getSource();
         LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
+
         Arrow arrow = (Arrow) damageSource.getDirectEntity();
+        assert arrow != null;
 
         LivingEntity livingDefender = e.getEntity();
         float minecraftArrowBaseDamage = (float) arrow.getBaseDamage();
-        float newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", minecraftArrowBaseDamage)));
-        float flightSpeededAdjustedDamage = (float) (newBaseFlatDamage * arrow.getDeltaMovement().length()); //speed
-        float postCritAdjustedDamage = calculateCritArrow(arrow, livingAttacker, flightSpeededAdjustedDamage);
+        var data = AttributeHelpers.getBasicElementalData(livingAttacker, livingDefender,false, Map.entry("physical", minecraftArrowBaseDamage));
 
-        int roundedDamage = Math.round(postCritAdjustedDamage);
-        e.setAmount(roundedDamage);
+        AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, false);
+        AttributeHelpers.multiplyWithArrowSpeed(data, arrow);
+        AttributeHelpers.multiplyWithCritDamageForArrowsIfCrit(data, livingAttacker, arrow);
+        AilmentApplier.applyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
+
+        float newBaseFlatDamage = sumOfDamages(data);
+
+        int roundedDamage = Math.round(newBaseFlatDamage);
+        float finalDamage = Config.roundFinalDamage ? roundedDamage : newBaseFlatDamage;
+
+        e.setAmount(finalDamage);
     }
-    public static void manageMeleeAndOtherProjectiles(LivingEntity livingAttacker, Entity directEntity, DamageSource damageSource, LivingHurtEvent e) {
+    public static void manageOtherSpells(LivingDamageEvent e) {
+        DamageSource damageSource = e.getSource();
+        LivingEntity livingCaster = (LivingEntity) damageSource.getEntity();
+        var livingDefender = e.getEntity();
 
-        float baseDamage = e.getAmount();
+        float baseSpellDamage = e.getAmount();
+        var data = AttributeHelpers.getBasicElementalData(livingCaster, livingDefender, true, Map.entry("physical", baseSpellDamage));
+
+        AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, true);
+        AttributeHelpers.multiplyWithCritDamageIfCrit(data, livingCaster, true);
+        AilmentApplier.applyAllAilmentsFromDamage(livingCaster, livingDefender, data);
+
+        float newBaseSpellDamage = sumOfDamages(data);
+
+        int roundedDamage = Math.round(newBaseSpellDamage);
+        float finalDamage = Config.roundFinalDamage ? roundedDamage : newBaseSpellDamage;
+        e.setAmount(finalDamage);
+    }
+    public static void managePlayerMelee(LivingDamageEvent e) {
+
+        DamageSource damageSource = e.getSource();
+        Player player = (Player) damageSource.getEntity();
+        assert player != null;
+
         LivingEntity livingDefender = e.getEntity();
+        float baseDamage = e.getAmount();
 
         //"physical" damage
-        float expectedBaseDamage = AttributeHelpers.getBaseTotal(livingAttacker, Attributes.ATTACK_DAMAGE);
+        float expectedBaseDamage = AttributeHelpers.getBaseTotal(player, Attributes.ATTACK_DAMAGE);
         if(baseDamage > expectedBaseDamage) baseDamage = expectedBaseDamage; //stops crit damage from other mods from being applied twice
-        float newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", baseDamage)));
+        var data = AttributeHelpers.getBasicElementalData(player, livingDefender, false, Map.entry("physical", baseDamage));
 
+        if(Config.enableDebugMode) {
+            System.out.println("elementalData = " + data);
+
+            player.sendSystemMessage(Component.literal("DamageSource to String: " + damageSource));
+            player.sendSystemMessage(Component.literal("DamageType: " + damageSource.type()));
+            player.sendSystemMessage(Component.literal("DamageSource msgId: " + damageSource.getMsgId()));
+            ElementalAttackDamageCompatMod.LOGGER.info(damageSource.toString());
+            ElementalAttackDamageCompatMod.LOGGER.info("Melee player damage event fired");
+        }
+
+        AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, false);
+        AttributeHelpers.multiplyWithCritDamageIfMeleeCrit(data, player);
+        AilmentApplier.applyAllAilmentsFromDamage(player, livingDefender, data);
+
+        float newBaseFlatDamage = sumOfDamages(data);
+
+        int roundedDamage = Math.round(newBaseFlatDamage); //remember that base damage already checks for crit.
+        float finalDamage = Config.roundFinalDamage ? roundedDamage : newBaseFlatDamage;
+        ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
+
+        boolean isProjectWarDanceInstalled = ModList.get().isLoaded("wardance");
+        boolean isEpicFightInstalled = ModList.get().isLoaded("epicfight");
+
+        if(itemStack.canPerformAction(ToolActions.SWORD_SWEEP) && !(isEpicFightInstalled || isProjectWarDanceInstalled)) {
+            List<LivingEntity> nearbyEnemies = getNearbyEnemies(player, livingDefender);
+            int sweepingLevel = getSweepingLevelOfPlayerWeapon(player);
+            //todo: apply ailment effects to sweeped enemies as well
+            performSweepingAttack(sweepingLevel, finalDamage, damageSource, nearbyEnemies, e); //baseDamage
+        }
+        else {
+            //ElementApplier.applyAllFromAttacker(livingDefender, 0, 80, data);
+            e.setAmount(finalDamage);
+        }
+    }
+    public static void manageNonPlayerMelee(LivingDamageEvent e) {
+
+        DamageSource damageSource = e.getSource();
+        LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
+        LivingEntity livingDefender = e.getEntity();
+        float baseDamage = e.getAmount();
+
+        var data = AttributeHelpers.getBasicElementalData(livingAttacker, livingDefender, false, Map.entry("physical", baseDamage));
+
+        if(Config.enableDebugMode) {
+            ElementalAttackDamageCompatMod.LOGGER.info(damageSource.toString());
+            ElementalAttackDamageCompatMod.LOGGER.info("Other melee damage event fired");
+        }
+
+        assert livingAttacker != null;
+
+        AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, false);
+        AttributeHelpers.multiplyWithCritDamageIfMeleeCrit(data, livingAttacker);
+        AilmentApplier.applyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
+
+        float newBaseFlatDamage = sumOfDamages(data);
+
+        int roundedDamage = Math.round(newBaseFlatDamage); //remember that base damage already checks for crit.
+        float finalDamage = Config.roundFinalDamage ? roundedDamage : newBaseFlatDamage;
+
+        e.setAmount(finalDamage);
+    }
+    public static void manageMeleeAndOtherProjectiles(LivingDamageEvent e) {
+
+        DamageSource damageSource = e.getSource();
+
+        //we can cast because we are checking already in hasFailedInitialChecks() that e.getSource().getEntity() is an instance of LivingEntity.
+        LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
+        Entity directEntity = damageSource.getDirectEntity();
+
+        //ElementApplier.applyAllFromAttacker(livingDefender, 0, 80, data);
         //----MELEE---- ONLY FOR PLAYERS
         if(livingAttacker instanceof Player player && directEntity == player) {
-            if(Config.enableDebugMode) {
-                ElementalAttackDamageCompatMod.LOGGER.info(damageSource.type().toString());
-                ElementalAttackDamageCompatMod.LOGGER.info("Melee player damage event fired");
-            }
-
-            float critAdjustedDamage = calculateMeleeCrit(player, newBaseFlatDamage);
-            ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
-
-            boolean isProjectWarDanceInstalled = ModList.get().isLoaded("projectwardance");
-            boolean isEpicFightInstalled = ModList.get().isLoaded("epicfight");
-            if(itemStack.canPerformAction(ToolActions.SWORD_SWEEP) && !(isEpicFightInstalled || isProjectWarDanceInstalled)) {
-                List<LivingEntity> nearbyEnemies = getNearbyEnemies(player, livingDefender);
-                int sweepingLevel = getSweepingLevelOfPlayerWeapon(player);
-                performSweepingAttack(sweepingLevel, critAdjustedDamage, damageSource, nearbyEnemies, e); //baseDamage
-            }
-            else {
-                int roundedDamage = Math.round(critAdjustedDamage); //remember that base damage already checks for crit.
-                e.setAmount(roundedDamage);
-            }
+            managePlayerMelee(e);
         }
-        //---RANGED---: OTHER PROJECTILES (PLAYERS AND NON-PLAYERS)
-        //and ---MELEE---(NON-PLAYERS)
-        else {
-
-            float critAdjustedDamage;
-            //MELEE (NON-PLAYERS)
-            if(directEntity == livingAttacker) {
-                if(Config.enableDebugMode) {
-                    ElementalAttackDamageCompatMod.LOGGER.info(damageSource.type().toString());
-                    ElementalAttackDamageCompatMod.LOGGER.info("Other melee damage event fired");
-                }
-
-                critAdjustedDamage = calculateMeleeCrit(livingAttacker, newBaseFlatDamage);
-            }
-            //RANGED: OTHER PROJECTILES
-            else {
-                if(Config.enableDebugMode) {
-                    ElementalAttackDamageCompatMod.LOGGER.info(damageSource.type().toString());
-                    ElementalAttackDamageCompatMod.LOGGER.info("Other projectiles damage event fired");
-                }
-                baseDamage = e.getAmount();
-                newBaseFlatDamage = sumOfDamages(AttributeHelpers.getAllElementalData(livingAttacker, livingDefender, false, Map.entry("physical", baseDamage)));
-                critAdjustedDamage = calculatePostCritDamage(livingAttacker, false, newBaseFlatDamage);
-            }
-            int roundedDamage = Math.round(critAdjustedDamage);
-            e.setAmount(roundedDamage);
-        }
-    }
-
-    public static float calculateCritArrow(Arrow arrow, LivingEntity livingAttacker, float preCritDamage) {
-        //vanilla MC assumes that a fully charged bow or crossbow will automatically crit.
-        if(arrow.isCritArrow() && Config.disableVanillaFullyChargedBowCrit) {
-            arrow.setCritArrow(rollForIfAttacksOrSpellsCrit(livingAttacker, false));
-        }
-        Float critDamage;
-        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, false);
-        critDamage = critData.get("crit_damage");
-
-        float postCritDamage = preCritDamage;
-        if(arrow.isCritArrow()) {
-            postCritDamage = preCritDamage * critDamage;
-        }
-        return postCritDamage;
-    }
-    public static float calculateMeleeCrit(LivingEntity livingAttacker, float preCritDamage) {
-
-        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, false);
-        Float critDamage = critData.get("crit_damage");
-
-        float postCritDamage;
-        if(!livingAttacker.onGround() && livingAttacker.fallDistance > 0 && !Config.disableVanillaFallingCrit) {
-            postCritDamage = preCritDamage * critDamage;
+        //MELEE (NON-PLAYERS)
+        else if(directEntity == livingAttacker && livingAttacker != null) {
+            manageNonPlayerMelee(e);
         }
         else {
-            postCritDamage = calculatePostCritDamage(livingAttacker, false, preCritDamage);
+            manageOtherProjectiles(e);
         }
-        return postCritDamage;
     }
-    public static float calculatePostCritDamage(LivingEntity livingAttackerOrCaster, boolean isSpell, float preCritDamage) {
-        float postCritDamage = preCritDamage;
 
-        Float critDamage;
-        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttackerOrCaster, isSpell);
-        critDamage = critData.get("crit_damage");
+    private static void manageOtherProjectiles(LivingDamageEvent e) {
+        //RANGED: OTHER PROJECTILES
+        DamageSource damageSource = e.getSource();
+        LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
+        LivingEntity livingDefender = e.getEntity();
 
-        if(rollForIfAttacksOrSpellsCrit(livingAttackerOrCaster, isSpell)) {
-            postCritDamage = preCritDamage * critDamage;
+        if(Config.enableDebugMode) {
+            ElementalAttackDamageCompatMod.LOGGER.info(damageSource.toString());
+            ElementalAttackDamageCompatMod.LOGGER.info("Other projectiles damage event fired");
         }
-        return postCritDamage;
+        float baseDamage = e.getAmount();
+
+        //TaCZ guns trigger this twice,
+        // with gun damage split into two instances, with my added modifiers counted per instance
+        // so we need to get the split base damage twice, and add our added modifiers divided by 2 twice.
+
+        HashMap<String, Float> data;
+        float newBaseFlatDamage;
+        if(isTaCZ_Bullet(damageSource)) {
+            data = AttributeHelpers.getBasicElementalData(livingAttacker, livingDefender, false, Map.entry("physical", 0f));
+            //crit for these bullets are rolled independently for each part, and does not give the expected crit damage when it does crit.
+        }
+        else {
+            data = AttributeHelpers.getBasicElementalData(livingAttacker, livingDefender, false, Map.entry("physical", baseDamage));
+        }
+
+        AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, false);
+        AttributeHelpers.multiplyWithCritDamageIfCrit(data, livingAttacker, false);
+        AilmentApplier.applyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
+
+        if(isTaCZ_Bullet(damageSource)) {
+            //crit for these bullets are rolled independently for each part, and does not give the expected crit damage when it does crit.
+            newBaseFlatDamage = baseDamage + sumOfDamages(data) / 2;
+        }
+        else {
+            newBaseFlatDamage = sumOfDamages(data);
+        }
+
+        int roundedDamage = Math.round(newBaseFlatDamage);
+        float finalDamage = Config.roundFinalDamage ? roundedDamage : newBaseFlatDamage;
+        e.setAmount(finalDamage);
     }
 
-    public static boolean rollForIfAttacksOrSpellsCrit(LivingEntity livingAttacker, boolean isSpell) {
-        Float critChance;
-        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, isSpell);
-        critChance = critData.get("crit_chance");
-
-        float critRoll = (float) Math.random();
-        return critChance >= critRoll;
-    }
+    //--------------------------------------------------------DAMAGE CALCULATIONS--------------------------------------------------------
 
     public static float sumOfDamages(HashMap<String, Float> elementalData) {
         float sum = 0f;
@@ -236,5 +294,28 @@ public class DamageManager {
             sum += entry.getValue();
         }
         return sum;
+    }
+
+    private static boolean isTaCZ_Bullet(DamageSource damageSource) {
+        boolean isTaCZ_Bullet = false;
+        for(var key : DamageSourcesCompat.taczBullets) {
+            if(damageSource.is(key)) {
+                isTaCZ_Bullet = true;
+                break;
+            }
+        }
+
+        return isTaCZ_Bullet;
+    }
+
+    public static boolean isCustomSpellDamageSource(DamageSource damageSource) {
+        boolean isOtherSpell = false;
+        for(var otherSpellRegistryKey : DamageSourcesCompat.otherSpellDamageSources) {
+            if(damageSource.is(otherSpellRegistryKey)) {
+                isOtherSpell = true;
+                break;
+            }
+        }
+        return isOtherSpell;
     }
 }

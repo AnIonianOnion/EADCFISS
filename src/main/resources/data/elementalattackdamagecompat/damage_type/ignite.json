@@ -1,0 +1,7 @@
+{
+  "message_id": "ignite",
+  "exhaustion": 0.0,
+  "scaling": "never",
+  "effects": "burning",
+  "death_message_type": "default"
+}

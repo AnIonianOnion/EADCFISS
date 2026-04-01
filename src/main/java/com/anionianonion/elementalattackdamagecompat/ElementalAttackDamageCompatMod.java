@@ -1,7 +1,7 @@
 package com.anionianonion.elementalattackdamagecompat;
 
+import com.anionianonion.elementalattackdamagecompat.items.ModItems;
 import com.mojang.logging.LogUtils;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -29,16 +29,31 @@ public class ElementalAttackDamageCompatMod {
         context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         ModAttributes.register(modEventBus);
+        ModItems.register(modEventBus);
 
         IS_RANDOM_DAMAGE_MOD_ENABLED = ModList.get().isLoaded("randomdamagerange");
     }
 
+    //only affects living entities by default
     private void addAttributesToPlayers(EntityAttributeModificationEvent event) {
 
+        /*
         //registers attributes to only players
         for (var attribute : ModAttributes.ATTRIBUTES_REGISTRY.getEntries()) {
             event.add(EntityType.PLAYER, attribute.get());
         }
+         */
+
+        //all living entities
+        for (var attribute : ModAttributes.ATTRIBUTES_REGISTRY.getEntries()) {
+            for(var type : event.getTypes()) {
+                event.add(type, attribute.get());
+            }
+        }
+    }
+
+    private void addAttributesToEntities(EntityAttributeModificationEvent event) {
+
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

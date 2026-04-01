@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "com.anionianonion.elementalattackdamagecompat.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "ArmorDoesntAffectElementalDamageMixin",
+    "DamageSourcesMixin",
+    "SilenceDoTDamageMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "refmap": "eadcfiss.mixins.refmap.json"
+}

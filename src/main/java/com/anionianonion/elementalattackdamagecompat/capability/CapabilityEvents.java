@@ -1,0 +1,37 @@
+package com.anionianonion.elementalattackdamagecompat.capability;
+
+import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompatMod;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
+import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+
+@Mod.EventBusSubscriber(modid = ElementalAttackDamageCompatMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+public class CapabilityEvents {
+
+    @SubscribeEvent
+    public static void onAttachCapabilities(AttachCapabilitiesEvent<Entity> event) {
+
+        Entity entity = event.getObject();
+
+        // 1. Attach AilmentData to ALL LivingEntities (targets)
+        if (entity instanceof LivingEntity living) {
+            event.addCapability(
+                    ResourceLocation.fromNamespaceAndPath(ElementalAttackDamageCompatMod.MOD_ID, "ailment_data"),
+                    new AilmentDataProvider()
+            );
+        }
+
+        // 2. Attach AilmentModifiers to PLAYERS (attackers)
+        if (entity instanceof Player player) {
+            event.addCapability(
+                    ResourceLocation.fromNamespaceAndPath(ElementalAttackDamageCompatMod.MOD_ID, "ailment_modifiers"),
+                    new AilmentModifierProvider()
+            );
+        }
+    }
+}

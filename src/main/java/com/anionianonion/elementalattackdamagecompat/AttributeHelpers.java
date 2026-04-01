@@ -4,6 +4,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.projectile.Arrow;
 
 import java.util.HashMap;
 import java.util.List;
@@ -14,23 +15,14 @@ public class AttributeHelpers {
 
     //--------------------------------------------------------ATTRIBUTE GETTERS--------------------------------------------------------
     //ties everything together.
-    public static HashMap<String, Float> getAllElementalData(LivingEntity livingAttacker, LivingEntity livingDefender, boolean isSpell, Map.Entry<String, Float> otherDamageData) {
+    public static HashMap<String, Float> getBasicElementalData(LivingEntity livingAttacker, LivingEntity livingDefender, boolean isSpell, Map.Entry<String, Float> otherDamageData) {
 
         HashMap<String, Float> baseElementalDamageData = getBaseElementalDamageData(otherDamageData);
         HashMap<String, Float> elementalAddedDamageData = getAddedElementalDamageData(livingAttacker, isSpell);
         HashMap<String, Float> elementalIncreasesAndDecreases = getElementalIncreasesAndDecreasesData(livingAttacker, isSpell);
         HashMap<String, Float> elementalMoreAndLessModifiers = getElementalMoreAndLessModifiersData(livingAttacker, isSpell);
-        HashMap<String, Float> enemyElementalResistances = getElementalResistances(livingDefender);
 
         HashMap<String, Float> result = new HashMap<>(baseElementalDamageData);
-        /*
-        for(var entryB : mapB.entrySet()) {
-            mapA.compute(entryB.getKey(), (keyA, valueA) -> {
-                var num2 = mapB.get(key);
-                return valueA plusMinusTimesDivide num2;
-            })
-        }
-         */
 
         float effectiveAddedDamageMultiplier = 1.0f;
         for(Map.Entry<String, Float> entry : elementalAddedDamageData.entrySet()) {
@@ -39,6 +31,8 @@ public class AttributeHelpers {
                 return value + addedBaseDamage * effectiveAddedDamageMultiplier;
             });
         }
+
+        addShockEffectToIncreasesAndDecreases(elementalIncreasesAndDecreases, livingDefender);
 
         for(Map.Entry<String, Float> entry : elementalIncreasesAndDecreases.entrySet()) {
             result.compute(entry.getKey(), (key, value) -> {
@@ -51,35 +45,6 @@ public class AttributeHelpers {
             result.compute(entry.getKey(), (key, value) -> {
                 Float moreOrLessEffectiveMultiplier = elementalMoreAndLessModifiers.get(key);
                 return value * moreOrLessEffectiveMultiplier;
-            });
-        }
-
-
-        Float genericSpellResistance = ModAttributes.getAttributeValue(livingDefender, "irons_spellbooks:spell_resist");
-        float hardcappedResist = 0.90f;
-        float hardflooredResist = -2f;
-        for(Map.Entry<String, Float> entry : enemyElementalResistances.entrySet()) {
-            result.compute(entry.getKey(), (key, value) -> {
-                Float resistance = enemyElementalResistances.get(key);
-
-                Float softcappedElementalResist = ModAttributes.getAttributeValue(livingDefender, String.format("%s:%s_max_resistance", ElementalAttackDamageCompatMod.MOD_ID, key));
-                if(softcappedElementalResist == null) softcappedElementalResist = 0.5f;
-
-                float hardcappedOrSoftcappedResist = Math.min(softcappedElementalResist, hardcappedResist);
-
-                //todo: check default value of generic spell resist
-                //ttackOrSpellResistance stores the result of converting the damage reduction to a scale from 0 to 1, from 1 to 2.
-                //if it as an attack, we only take into account the elemental resistance. But if it's a spell, also add in additional generic spell resistance.
-                float attackOrSpellResistance = !isSpell ? resistance - 1 : (resistance - 1) + (genericSpellResistance - 1);
-                float cappedResistance = Math.min(attackOrSpellResistance, hardcappedOrSoftcappedResist);
-
-                float flooredResistance = Math.max(cappedResistance, hardflooredResist);
-                float clampedElementalResistance = flooredResistance; //because we set the softcap/hardcap (aka. max) and the hardfloor (aka. min), and only want the resist to be between these values
-
-                //verified formula
-                //let's say you deal 100 fire damage, and the enemy has 25% fire resist.
-                //then value is 100. flooredResistance is 0.25. So you deal 100 * (1 - .25) = 100 * 0.75 = 75 fire damage.
-                return value * (1 - clampedElementalResistance);
             });
         }
 
@@ -109,12 +74,9 @@ public class AttributeHelpers {
         return baseElementalDamageData;
 
     }
-
     public static HashMap<String, Float> getAddedElementalDamageData(LivingEntity livingAttacker, boolean isSpell) {
 
-        HashMap<String, Float> addedElementalData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.ADDITION);
-
-        return addedElementalData;
+        return getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.ADDITION);
     }
     public static HashMap<String, Float> getElementalIncreasesAndDecreasesData(LivingEntity livingAttacker, boolean isSpell) {
         HashMap<String, Float> elementalIncreasesAndDecreasesData = getElementalDataForGivenOperation(livingAttacker, isSpell, AttributeModifier.Operation.MULTIPLY_BASE);
@@ -244,6 +206,123 @@ public class AttributeHelpers {
         critData.put("crit_damage", critDamageBaseAmount * (1 + critDamageNetIncreaseAmount) * (1 + critDamageEffectiveMoreAmount));
 
         return critData;
+    }
+
+    public static void addShockEffectToIncreasesAndDecreases(HashMap<String, Float> elementalIncreasesAndDecreasesData, LivingEntity livingDefender) {
+        Float shockEffectValue = ModAttributes.getAttributeValue(livingDefender, String.format("%s:extra_damage_taken.shock", ElementalAttackDamageCompatMod.MOD_ID));
+        if(shockEffectValue == null) shockEffectValue = 0f;
+
+        for(String key : elementalIncreasesAndDecreasesData.keySet()) {
+            elementalIncreasesAndDecreasesData.merge(key, shockEffectValue, Float::sum);
+        }
+    }
+    public static void multiplyWithEnemyResistances(HashMap<String, Float> attackerData, LivingEntity livingDefender, boolean isSpell) {
+        HashMap<String, Float> enemyElementalResistances = getElementalResistances(livingDefender);
+
+        Float genericSpellResistance = ModAttributes.getAttributeValue(livingDefender, "irons_spellbooks:spell_resist");
+        float hardcappedResist = 0.90f;
+        float hardflooredResist = -2f;
+        for(Map.Entry<String, Float> entry : enemyElementalResistances.entrySet()) {
+            attackerData.compute(entry.getKey(), (key, value) -> {
+                Float resistance = enemyElementalResistances.get(key);
+
+                Float softcappedElementalResist = ModAttributes.getAttributeValue(livingDefender, String.format("%s:%s_max_resistance", ElementalAttackDamageCompatMod.MOD_ID, key));
+                if(softcappedElementalResist == null) softcappedElementalResist = 0.5f;
+
+                float hardcappedOrSoftcappedResist = Math.min(softcappedElementalResist, hardcappedResist);
+
+                //todo: check default value of generic spell resist
+                //ttackOrSpellResistance stores the result of converting the damage reduction to a scale from 0 to 1, from 1 to 2.
+                //if it as an attack, we only take into account the elemental resistance. But if it's a spell, also add in additional generic spell resistance.
+                float attackOrSpellResistance = !isSpell ? resistance - 1 : (resistance - 1) + (genericSpellResistance - 1);
+                float cappedResistance = Math.min(attackOrSpellResistance, hardcappedOrSoftcappedResist);
+
+                float clampedElementalResistance = Math.max(cappedResistance, hardflooredResist); //because we set the softcap/hardcap (aka. max) and the hardfloor (aka. min), and only want the resist to be between these values
+
+                //verified formula
+                //let's say you deal 100 fire damage, and the enemy has 25% fire resist.
+                //then value is 100. flooredResistance is 0.25. So you deal 100 * (1 - .25) = 100 * 0.75 = 75 fire damage.
+                return value * (1 - clampedElementalResistance);
+            });
+        }
+    }
+    public static void multiplyWithArrowSpeed(HashMap<String, Float> elementalData, Arrow arrow) {
+        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
+            elementalData.compute(entry.getKey(), (key, value) ->
+                    (float) (value * arrow.getDeltaMovement().length())
+            );
+        }
+    }
+    public static void multiplyWithCritDamageForArrowsIfCrit(HashMap<String, Float> elementalData, LivingEntity livingAttacker, Arrow arrow) {
+        if(arrow.isCritArrow() && Config.disableVanillaFullyChargedBowCrit) {
+            arrow.setCritArrow(rollForIfAttacksOrSpellsCrit(livingAttacker, false));
+        }
+
+        if(!arrow.isCritArrow()) return;
+
+        HashMap<String, Float> critData = getCritData(livingAttacker, false);
+        float critMultiplier = critData.get("crit_damage");
+
+        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
+            elementalData.compute(entry.getKey(), (key, value) ->
+                    value * critMultiplier
+            );
+        }
+    }
+    public static void multiplyWithCritDamageIfCrit(HashMap<String, Float> elementalData, LivingEntity livingAttackerOrCaster, boolean isSpell) {
+
+        boolean isCrit = rollForIfAttacksOrSpellsCrit(livingAttackerOrCaster, isSpell);
+        if(!isCrit) return;
+
+        HashMap<String, Float> critData = getCritData(livingAttackerOrCaster, isSpell);
+        float critMultiplier = critData.get("crit_damage");
+
+        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
+            elementalData.compute(entry.getKey(), (key, value) ->
+                    value * critMultiplier
+            );
+        }
+    }
+    public static void multiplyWithCritDamageIfMeleeCrit(HashMap<String, Float> elementalData, LivingEntity livingAttacker) {
+        boolean isFallCrit = !livingAttacker.onGround() && livingAttacker.fallDistance > 0 && !Config.disableVanillaFallingCrit;
+        boolean isCrit = rollForIfAttacksOrSpellsCrit(livingAttacker, false);
+
+        if(!isFallCrit && !isCrit) return;
+
+        HashMap<String, Float> critData = getCritData(livingAttacker, false);
+        float critMultiplier = critData.get("crit_damage");
+
+        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
+            elementalData.compute(entry.getKey(), (key, value) ->
+                    value * critMultiplier
+            );
+        }
+    }
+    public static void multiplyWithSpellSuppressionIfSuppressed(HashMap<String, Float> elementalData, LivingEntity livingDefender) {
+
+        Float spellSuppressionChance = ModAttributes.getAttributeValue(livingDefender, String.format("%s:spell_suppression_chance", ElementalAttackDamageCompatMod.MOD_ID));
+        if(spellSuppressionChance == null) spellSuppressionChance = 0f;
+        Float spellSuppressionPrevented = ModAttributes.getAttributeValue(livingDefender, String.format("%s:spell_suppression_prevented", ElementalAttackDamageCompatMod.MOD_ID));
+        if(spellSuppressionPrevented == null) spellSuppressionPrevented = 0.5f;
+
+        float roll = (float) Math.random();
+        if(spellSuppressionChance < roll) return;
+
+        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
+            Float finalSpellSuppressionPrevented = spellSuppressionPrevented;
+            elementalData.compute(entry.getKey(), (key, value) ->
+                    value * (1 - finalSpellSuppressionPrevented)
+            );
+        }
+    }
+
+    public static boolean rollForIfAttacksOrSpellsCrit(LivingEntity livingAttacker, boolean isSpell) {
+        Float critChance;
+        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, isSpell);
+        critChance = critData.get("crit_chance");
+
+        float critRoll = (float) Math.random();
+        return critChance >= critRoll;
     }
 
     /**

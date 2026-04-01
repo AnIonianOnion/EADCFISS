@@ -3,6 +3,7 @@ plugins {
     id 'idea'
     id 'maven-publish'
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'org.spongepowered.mixin' version '0.7+'
 }
 
 version = mod_version
@@ -149,10 +150,19 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
-    //compileOnly fg.deobf("io.redspace.ironsspellbooks:irons_spellbooks:1.20.1-3.4.0.9:api")
-    //runtimeOnly fg.deobf("io.redspace.ironsspellbooks:irons_spellbooks:1.20.1-3.4.0.9")
-
     implementation fg.deobf("io.redspace.ironsspellbooks:irons_spellbooks:1.20.1-3.4.0.9")
+
+    // Apply Mixin AP
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+
+mixin {
+    // MixinGradle Settings
+    add sourceSets.main, 'eadcfiss.mixins.refmap.json'
+    config 'eadcfiss.mixins.json'
+
+    debug.verbose = true
+    debug.export = true
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.
@@ -175,6 +185,7 @@ tasks.named('processResources', ProcessResources).configure {
 }
 
 // Example for how to get properties into the manifest for reading at runtime.
+//https://www.youtube.com/watch?v=6V4cI-DYrcI
 tasks.named('jar', Jar).configure {
     manifest {
         attributes([
@@ -184,9 +195,14 @@ tasks.named('jar', Jar).configure {
                 'Implementation-Title'    : project.name,
                 'Implementation-Version'  : project.jar.archiveVersion,
                 'Implementation-Vendor'   : mod_authors,
-                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+                "TweakClass": "org.spongepowered.asm.launch.MixinTweaker",
+                "TweakOrder": 0,
+                "MixinConfigs": "eadcfiss.mixins.json"
         ])
     }
+
+    rename 'mixin.refmap.json', 'eadcfiss.mixins.refmap.json'
 
     // This is the preferred method to reobfuscate your jar file
     finalizedBy 'reobfJar'

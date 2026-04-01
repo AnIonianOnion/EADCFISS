@@ -1,5 +1,9 @@
 package com.anionianonion.elementalattackdamagecompat;
 
+import com.anionianonion.elementalattackdamagecompat.ailments.Ailment;
+import com.anionianonion.elementalattackdamagecompat.ailments.AilmentDataHelper;
+import com.anionianonion.elementalattackdamagecompat.ailments.AilmentModifierHelper;
+import com.anionianonion.elementalattackdamagecompat.items.ScorchHelmetItem;
 import io.redspace.ironsspellbooks.api.events.SpellDamageEvent;
 import io.redspace.ironsspellbooks.damage.SpellDamageSource;
 import net.minecraft.nbt.CompoundTag;
@@ -7,17 +11,17 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.projectile.AbstractArrow;
-import net.minecraft.world.entity.projectile.Arrow;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.projectile.*;
 import net.minecraftforge.event.ItemAttributeModifierEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -50,7 +54,6 @@ public class EventHandler {
         }
     }
 
-
     @SubscribeEvent(priority=EventPriority.HIGHEST)
     public static void onAttackDamage(LivingDamageEvent e) {
         DamageSource damageSource = e.getSource();
@@ -61,7 +64,6 @@ public class EventHandler {
         LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
         var directEntity = damageSource.getDirectEntity();
 
-        if(DamageManager.hasFailedInitialChecks(damageSource)) return;
         //attacker
         //melee & non-bow projectiles gets flat added damage (and 'increases', and 'more' multipliers), nothing else
         //bow gets added damage (and 'increases', and 'more' multipliers), multiplied by speed in blocks/s
@@ -76,61 +78,38 @@ public class EventHandler {
                 DamageManager.manageMeleeAndOtherProjectiles(e);
         }
         //custom spell handler
-        else {
-                boolean isOtherSpell = false;
-                for(var otherSpellRegistryKey : DamageSourcesCompat.otherSpellDamageSources) {
-                    if(damageSource.is(otherSpellRegistryKey)) {
-                        isOtherSpell = true;
-                        break;
-                    }
-                }
-                if(isOtherSpell) DamageManager.manageOtherSpells(e);
+        else if(DamageManager.isCustomSpellDamageSource(damageSource)) {
+                DamageManager.manageOtherSpells(e);
         }
     }
 
     @SubscribeEvent
-    public static void spells(SpellDamageEvent e) {
+    public static void onSpellDamage(SpellDamageEvent e) {
         if(ElementalAttackDamageCompatMod.IS_RANDOM_DAMAGE_MOD_ENABLED) return;
 
         SpellDamageSource spellDamageSource = e.getSpellDamageSource();
         DamageSource damageSource = spellDamageSource.get();
         LivingEntity caster = (LivingEntity) damageSource.getEntity();
 
-        if(caster == null) {
-            if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.warn("caster is null");
-            return;
-        }
+        if(caster == null) return;
 
-        LivingEntity defender = e.getEntity();
-        var lastAttacker = defender.getLastAttacker();
-        if(Config.enableDebugMode) {
-            ElementalAttackDamageCompatMod.LOGGER.info("=====================");
-            ElementalAttackDamageCompatMod.LOGGER.info("lastAttacker: " + lastAttacker);
-            ElementalAttackDamageCompatMod.LOGGER.info("attacker's target: " + defender);
-            ElementalAttackDamageCompatMod.LOGGER.info("attacker is summon?: " + (lastAttacker instanceof MagicSummon));
-            ElementalAttackDamageCompatMod.LOGGER.info("attacker is summoned skele?: " + (lastAttacker instanceof SummonedSkeleton));
-            ElementalAttackDamageCompatMod.LOGGER.info("attacker is summoned zom?: " + (lastAttacker instanceof SummonedZombie));
-            ElementalAttackDamageCompatMod.LOGGER.info("=====================");
-        }
+        LivingEntity livingDefender = e.getEntity();
+        var lastAttacker = livingDefender.getLastAttacker();
 
         var originalTotalDamage = e.getOriginalAmount();
         var spellSchoolName = spellDamageSource.spell().getSchoolType().getId().getPath();
         var spellId = e.getSpellDamageSource().spell().getSpellId();
 
-        float baseTotalElementalDamage = DamageManager.sumOfDamages(AttributeHelpers.getAllElementalData(caster, defender, true, Map.entry(spellSchoolName, originalTotalDamage)));
-        float critAdjustedDamage = DamageManager.calculatePostCritDamage(caster, true, baseTotalElementalDamage);
+        var data = AttributeHelpers.getBasicElementalData(caster, livingDefender,true, Map.entry(spellSchoolName, originalTotalDamage));
 
-        Float spellSuppressionChance = ModAttributes.getAttributeValue(defender, String.format("%s:spell_suppression_chance", ElementalAttackDamageCompatMod.MOD_ID));
-        if(spellSuppressionChance == null) spellSuppressionChance = 0f;
-        Float spellSuppressionPrevented = ModAttributes.getAttributeValue(defender, String.format("%s:spell_suppression_prevented", ElementalAttackDamageCompatMod.MOD_ID));
-        if(spellSuppressionPrevented == null) spellSuppressionPrevented = 0.5f;
+        AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, true);
+        AttributeHelpers.multiplyWithCritDamageIfCrit(data, caster, true);
+        AttributeHelpers.multiplyWithSpellSuppressionIfSuppressed(data, livingDefender);
 
-        float roll = (float) Math.random();
-        float postSuppressionDamage = critAdjustedDamage;
-        if(spellSuppressionChance >= roll) postSuppressionDamage *= (1 - spellSuppressionPrevented);
+        float baseTotalElementalSpellDamage = DamageManager.sumOfDamages(data);
 
-        float rounded = Math.round(postSuppressionDamage);
-        float finalDamage = Config.roundFinalDamage ? rounded : postSuppressionDamage;
+        float rounded = Math.round(baseTotalElementalSpellDamage);
+        float finalDamage = Config.roundFinalDamage ? rounded : baseTotalElementalSpellDamage;
 
         if(Config.enableDebugMode) {
             ElementalAttackDamageCompatMod.LOGGER.info(e.getEntity().toString());
@@ -193,4 +172,36 @@ public class EventHandler {
             );
         }
     }
+
+    @SubscribeEvent
+    public static void onLivingTick(LivingEvent.LivingTickEvent e) {
+        LivingEntity entity = e.getEntity();
+
+        // Only tick ailments on the server
+        if (entity.level().isClientSide) {
+            return;
+        }
+
+        AilmentDataHelper.getOptional(entity).ifPresent(cap -> {
+            cap.tick(entity);
+        });
+    }
+
+    @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+
+        var player = event.player;
+        var mods = AilmentModifierHelper.getMutable(player);
+
+        boolean wearingHelmet =
+                player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof ScorchHelmetItem;
+
+        if (wearingHelmet) {
+            mods.setReplacement(Ailment.IGNITE, Ailment.SCORCH);
+        } else {
+            mods.setReplacement(Ailment.IGNITE, null); // remove override
+        }
+    }
+
 }

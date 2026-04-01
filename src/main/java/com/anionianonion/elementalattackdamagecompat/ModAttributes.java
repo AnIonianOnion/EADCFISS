@@ -15,10 +15,17 @@ import java.util.*;
 public interface ModAttributes {
 
     DeferredRegister<Attribute> ATTRIBUTES_REGISTRY = DeferredRegister.create(ForgeRegistries.ATTRIBUTES, ElementalAttackDamageCompatMod.MOD_ID);
-    List<String> ELEMENTAL_ATTRIBUTE_NAMES = List.of("fire", "ice", "lightning", "holy", "ender", "blood", "evocation", "nature", "eldritch", "sound", "geo", "aqua", "technomancy", "abyssal");
-
+    List<String> ELEMENTAL_ATTRIBUTE_NAMES = Arrays.stream(Element.values()).map(e -> e.name().toLowerCase()).toList();
     int numTypes = 5;
     Map<String, String> customSchoolToResistAttributeKey = new HashMap<>();
+
+    RegistryObject<Attribute> SPELL_MULTIPLIER = ATTRIBUTES_REGISTRY.register("spell_damage_multiplier",
+            () -> new RangedAttribute("multipliers.spell_damage", 1, 0, Double.POSITIVE_INFINITY));
+    RegistryObject<Attribute> ATTACK_MULTIPLIER = ATTRIBUTES_REGISTRY.register("attack_damage_multiplier",
+            () -> new RangedAttribute("multipliers.attack_damage", 1, 0, Double.POSITIVE_INFINITY));
+
+    RegistryObject<Attribute> SHOCKED_EXTRA_DAMAGE_TAKEN_MULTIPLIER = ATTRIBUTES_REGISTRY.register("extra_damage_taken.shock",
+            () -> new RangedAttribute("multipliers.extra_damage_taken.shock", 0, 0, Double.POSITIVE_INFINITY));
 
     //based on https://www.youtube.com/watch?v=0gVO99YtaxE&t=5m48s&ab_channel=Kapitencraft
     //Changed -1 to null for more control, in case attribute values are negative.
@@ -55,7 +62,12 @@ public interface ModAttributes {
                     () -> new RangedAttribute(String.format("attack_damage.%s", elementName), 0, 0, Double.POSITIVE_INFINITY));
             ATTRIBUTES_REGISTRY.register(String.format("%s_spell_damage", elementName),
                     () -> new RangedAttribute(String.format("spell_damage.%s", elementName), 0, 0, Double.POSITIVE_INFINITY));
+            ATTRIBUTES_REGISTRY.register(String.format("%s_damage", elementName),
+                    () -> new RangedAttribute(String.format("attack_and_spell_damage.%s", elementName), 0, 0, Double.POSITIVE_INFINITY));
+            ATTRIBUTES_REGISTRY.register(String.format("%s_max_resistance", elementName),
+                    () -> new RangedAttribute(String.format("max_resistance.%s", elementName), 0.75, 0.5, 0.9));
         }
+
         ATTRIBUTES_REGISTRY.register("attack_crit_chance",
                 () -> new RangedAttribute("attack.crit_chance", 0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY));
         ATTRIBUTES_REGISTRY.register("attack_crit_damage",
@@ -77,10 +89,12 @@ public interface ModAttributes {
                     () -> new RangedAttribute(String.format("multipliers.type_%s_damage", finalI), 1, 0, Double.POSITIVE_INFINITY));
         }
 
-        RegistryObject<Attribute> SPELL_MULTIPLIER = ATTRIBUTES_REGISTRY.register("spell_damage_multiplier",
-                () -> new RangedAttribute("multipliers.spell_damage", 1, 0, Double.POSITIVE_INFINITY));
-        RegistryObject<Attribute> ATTACK_MULTIPLIER = ATTRIBUTES_REGISTRY.register("attack_damage_multiplier",
-                () -> new RangedAttribute("multipliers.attack_damage", 1, 0, Double.POSITIVE_INFINITY));
+        ATTRIBUTES_REGISTRY.register("spell_suppression_chance",
+                () -> new RangedAttribute("spell_suppression.chance", 0, 0, 1));
+        ATTRIBUTES_REGISTRY.register("spell_suppression_prevented",
+                () -> new RangedAttribute("spell_suppression.prevented", 0.5, 0, 1));
+        ATTRIBUTES_REGISTRY.register("spell_dodge_chance",
+                () -> new RangedAttribute("spell_dodge.chance", 0, 0, 1));
 
         ATTRIBUTES_REGISTRY.register(eventBus);
 
