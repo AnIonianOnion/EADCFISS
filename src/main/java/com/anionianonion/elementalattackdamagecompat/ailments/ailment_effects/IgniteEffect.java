@@ -1,16 +1,18 @@
 package com.anionianonion.elementalattackdamagecompat.ailments.ailment_effects;
 
+import com.anionianonion.elementalattackdamagecompat.AttributeHelpers;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
 import com.anionianonion.elementalattackdamagecompat.ailments.ModDamageSources;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 
-public class IgniteEffect implements AilmentEffect {
+public class IgniteEffect extends DamagingAilmentEffect {
+
+    private static final float BASE_DURATION_IN_SECONDS = 4f;
 
     @Override
     public void tick(LivingEntity entity, AilmentInstance inst) {
 
-        entity.setSharedFlagOnFire(true);
         inst.incrementTickCounter();
         if(inst.getTickCounter() < 20) return;
         inst.resetTickCounter();
@@ -21,7 +23,12 @@ public class IgniteEffect implements AilmentEffect {
     }
 
     @Override
-    public void onExpire(LivingEntity entity, AilmentInstance instance) {
-        entity.setSharedFlagOnFire(false);
+    public void onExpireExtraFunction(LivingEntity entity, AilmentInstance instance) {
+
+    }
+
+    @Override
+    public float getDurationInSeconds(LivingEntity livingAttackerOrCaster) {
+        return BASE_DURATION_IN_SECONDS * AttributeHelpers.getDamagingAilmentDurationMultiplier(livingAttackerOrCaster, "ignite");
     }
 }

@@ -18,16 +18,11 @@ public class CapabilityEvents {
 
         Entity entity = event.getObject();
 
-        // 1. Attach AilmentData to ALL LivingEntities (targets)
-        if (entity instanceof LivingEntity living) {
+        if (entity instanceof LivingEntity) {
             event.addCapability(
                     ResourceLocation.fromNamespaceAndPath(ElementalAttackDamageCompatMod.MOD_ID, "ailment_data"),
                     new AilmentDataProvider()
             );
-        }
-
-        // 2. Attach AilmentModifiers to PLAYERS (attackers)
-        if (entity instanceof Player player) {
             event.addCapability(
                     ResourceLocation.fromNamespaceAndPath(ElementalAttackDamageCompatMod.MOD_ID, "ailment_modifiers"),
                     new AilmentModifierProvider()

@@ -52,14 +52,8 @@ public class ElementalAttackDamageCompatMod {
         }
     }
 
-    private void addAttributesToEntities(EntityAttributeModificationEvent event) {
-
-    }
-
     private void commonSetup(final FMLCommonSetupEvent event) {
-        // Some common setup code
-        LOGGER.info("HELLO FROM ELEMENTAL ATTACK DAMAGE COMPAT MOD'S COMMON SETUP");
-        LOGGER.info("DIRT BLOCK >> {}", ForgeRegistries.BLOCKS.getKey(Blocks.DIRT));
+
     }
 
 }

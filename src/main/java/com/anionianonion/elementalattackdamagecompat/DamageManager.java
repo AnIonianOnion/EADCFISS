@@ -86,7 +86,7 @@ public class DamageManager {
         }
         return sweepingLevel;
     }
-    public static void performSweepingAttack(int sweepingLevel, float critAdjustedDamage, DamageSource damageSource, List<LivingEntity> nearbyEnemies, LivingDamageEvent e) {
+    public static void performSweepingAttack(int sweepingLevel, float critAdjustedDamage, DamageSource damageSource, List<LivingEntity> nearbyEnemies, LivingDamageEvent e, HashMap<String, Float> elementalDamageData) {
         e.setAmount(Math.round(critAdjustedDamage));
 
         float sweepingDamage = 1 + critAdjustedDamage * ((float) sweepingLevel / (sweepingLevel + 1));
@@ -102,6 +102,13 @@ public class DamageManager {
 
         nearbyEnemies.forEach(nearbyEnemy -> {
           nearbyEnemy.hurt(sweepingSource, roundedSweepingDamage);
+
+            // 2. Apply ailments AFTER damage (PoE timing)
+            AilmentApplier.critApplyAllAilmentsFromDamage(
+                    (LivingEntity) damageSource.getEntity(),
+                    nearbyEnemy,
+                    elementalDamageData
+            );
         });
     }
 
@@ -118,8 +125,8 @@ public class DamageManager {
 
         AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, false);
         AttributeHelpers.multiplyWithArrowSpeed(data, arrow);
-        AttributeHelpers.multiplyWithCritDamageForArrowsIfCrit(data, livingAttacker, arrow);
-        AilmentApplier.applyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
+        AttributeHelpers.multiplyWithCritDamageForArrowsIfCrit(data, livingAttacker, livingDefender, arrow);
+        AttributeHelpers.applyLessDamageFromPossibleSapEffects(data, livingAttacker);
 
         float newBaseFlatDamage = sumOfDamages(data);
 
@@ -127,6 +134,8 @@ public class DamageManager {
         float finalDamage = Config.roundFinalDamage ? roundedDamage : newBaseFlatDamage;
 
         e.setAmount(finalDamage);
+        if(arrow.isCritArrow()) AilmentApplier.critApplyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
+        else AilmentApplier.nonCritTryToApplyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
     }
     public static void manageOtherSpells(LivingDamageEvent e) {
         DamageSource damageSource = e.getSource();
@@ -137,14 +146,20 @@ public class DamageManager {
         var data = AttributeHelpers.getBasicElementalData(livingCaster, livingDefender, true, Map.entry("physical", baseSpellDamage));
 
         AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, true);
-        AttributeHelpers.multiplyWithCritDamageIfCrit(data, livingCaster, true);
-        AilmentApplier.applyAllAilmentsFromDamage(livingCaster, livingDefender, data);
+        AttributeHelpers.multiplyWithCritDamageIfCrit(data, livingCaster, livingDefender, true);
+
+        var preCritData = copy(data);
+        boolean isCrit = isCrit(preCritData, data);
+        AttributeHelpers.applyLessDamageFromPossibleSapEffects(data, livingCaster);
 
         float newBaseSpellDamage = sumOfDamages(data);
 
         int roundedDamage = Math.round(newBaseSpellDamage);
         float finalDamage = Config.roundFinalDamage ? roundedDamage : newBaseSpellDamage;
         e.setAmount(finalDamage);
+        if(isCrit) AilmentApplier.critApplyAllAilmentsFromDamage(livingCaster, livingDefender, data);
+        else AilmentApplier.nonCritTryToApplyAllAilmentsFromDamage(livingCaster, livingDefender, data);
+
     }
     public static void managePlayerMelee(LivingDamageEvent e) {
 
@@ -161,7 +176,6 @@ public class DamageManager {
         var data = AttributeHelpers.getBasicElementalData(player, livingDefender, false, Map.entry("physical", baseDamage));
 
         if(Config.enableDebugMode) {
-            System.out.println("elementalData = " + data);
 
             player.sendSystemMessage(Component.literal("DamageSource to String: " + damageSource));
             player.sendSystemMessage(Component.literal("DamageType: " + damageSource.type()));
@@ -170,14 +184,16 @@ public class DamageManager {
             ElementalAttackDamageCompatMod.LOGGER.info("Melee player damage event fired");
         }
 
+        var preCritData = copy(data);
+        AttributeHelpers.multiplyWithCritDamageIfMeleeCrit(data, player, livingDefender);
+        boolean isCrit = isCrit(preCritData, data);
         AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, false);
-        AttributeHelpers.multiplyWithCritDamageIfMeleeCrit(data, player);
-        AilmentApplier.applyAllAilmentsFromDamage(player, livingDefender, data);
+        AttributeHelpers.applyLessDamageFromPossibleSapEffects(data, player);
 
-        float newBaseFlatDamage = sumOfDamages(data);
+        float penultimateDamage = sumOfDamages(data);
 
-        int roundedDamage = Math.round(newBaseFlatDamage); //remember that base damage already checks for crit.
-        float finalDamage = Config.roundFinalDamage ? roundedDamage : newBaseFlatDamage;
+        int roundedDamage = Math.round(penultimateDamage); //remember that base damage already checks for crit.
+        float finalDamage = Config.roundFinalDamage ? roundedDamage : penultimateDamage;
         ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
 
         boolean isProjectWarDanceInstalled = ModList.get().isLoaded("wardance");
@@ -186,12 +202,13 @@ public class DamageManager {
         if(itemStack.canPerformAction(ToolActions.SWORD_SWEEP) && !(isEpicFightInstalled || isProjectWarDanceInstalled)) {
             List<LivingEntity> nearbyEnemies = getNearbyEnemies(player, livingDefender);
             int sweepingLevel = getSweepingLevelOfPlayerWeapon(player);
-            //todo: apply ailment effects to sweeped enemies as well
-            performSweepingAttack(sweepingLevel, finalDamage, damageSource, nearbyEnemies, e); //baseDamage
+
+            performSweepingAttack(sweepingLevel, finalDamage, damageSource, nearbyEnemies, e, data); //baseDamage
         }
         else {
-            //ElementApplier.applyAllFromAttacker(livingDefender, 0, 80, data);
             e.setAmount(finalDamage);
+            if(isCrit) AilmentApplier.critApplyAllAilmentsFromDamage(player, livingDefender, data);
+            else AilmentApplier.nonCritTryToApplyAllAilmentsFromDamage(player, livingDefender, data);
         }
     }
     public static void manageNonPlayerMelee(LivingDamageEvent e) {
@@ -210,9 +227,11 @@ public class DamageManager {
 
         assert livingAttacker != null;
 
+        var preCritData = copy(data);
+        AttributeHelpers.multiplyWithCritDamageIfMeleeCrit(data, livingAttacker, livingDefender);
+        boolean isCrit = isCrit(preCritData, data);
         AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, false);
-        AttributeHelpers.multiplyWithCritDamageIfMeleeCrit(data, livingAttacker);
-        AilmentApplier.applyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
+        AttributeHelpers.applyLessDamageFromPossibleSapEffects(data, livingAttacker);
 
         float newBaseFlatDamage = sumOfDamages(data);
 
@@ -220,29 +239,9 @@ public class DamageManager {
         float finalDamage = Config.roundFinalDamage ? roundedDamage : newBaseFlatDamage;
 
         e.setAmount(finalDamage);
+        if(isCrit) AilmentApplier.critApplyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
+        else AilmentApplier.nonCritTryToApplyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
     }
-    public static void manageMeleeAndOtherProjectiles(LivingDamageEvent e) {
-
-        DamageSource damageSource = e.getSource();
-
-        //we can cast because we are checking already in hasFailedInitialChecks() that e.getSource().getEntity() is an instance of LivingEntity.
-        LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
-        Entity directEntity = damageSource.getDirectEntity();
-
-        //ElementApplier.applyAllFromAttacker(livingDefender, 0, 80, data);
-        //----MELEE---- ONLY FOR PLAYERS
-        if(livingAttacker instanceof Player player && directEntity == player) {
-            managePlayerMelee(e);
-        }
-        //MELEE (NON-PLAYERS)
-        else if(directEntity == livingAttacker && livingAttacker != null) {
-            manageNonPlayerMelee(e);
-        }
-        else {
-            manageOtherProjectiles(e);
-        }
-    }
-
     private static void manageOtherProjectiles(LivingDamageEvent e) {
         //RANGED: OTHER PROJECTILES
         DamageSource damageSource = e.getSource();
@@ -269,9 +268,11 @@ public class DamageManager {
             data = AttributeHelpers.getBasicElementalData(livingAttacker, livingDefender, false, Map.entry("physical", baseDamage));
         }
 
+        var preCritData = copy(data);
+        AttributeHelpers.multiplyWithCritDamageIfCrit(data, livingAttacker, livingDefender, false);
+        boolean isCrit = isCrit(preCritData, data);
         AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, false);
-        AttributeHelpers.multiplyWithCritDamageIfCrit(data, livingAttacker, false);
-        AilmentApplier.applyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
+        AttributeHelpers.applyLessDamageFromPossibleSapEffects(data, livingAttacker);
 
         if(isTaCZ_Bullet(damageSource)) {
             //crit for these bullets are rolled independently for each part, and does not give the expected crit damage when it does crit.
@@ -284,6 +285,29 @@ public class DamageManager {
         int roundedDamage = Math.round(newBaseFlatDamage);
         float finalDamage = Config.roundFinalDamage ? roundedDamage : newBaseFlatDamage;
         e.setAmount(finalDamage);
+        if(isCrit) AilmentApplier.critApplyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
+        else AilmentApplier.nonCritTryToApplyAllAilmentsFromDamage(livingAttacker, livingDefender, data);
+    }
+    public static void manageMeleeAndOtherProjectiles(LivingDamageEvent e) {
+
+        DamageSource damageSource = e.getSource();
+
+        //we can cast because we are checking already in hasFailedInitialChecks() that e.getSource().getEntity() is an instance of LivingEntity.
+        LivingEntity livingAttacker = (LivingEntity) damageSource.getEntity();
+        Entity directEntity = damageSource.getDirectEntity();
+
+        //ElementApplier.applyAllFromAttacker(livingDefender, 0, 80, data);
+        //----MELEE---- ONLY FOR PLAYERS
+        if(livingAttacker instanceof Player player && directEntity == player) {
+            managePlayerMelee(e);
+        }
+        //MELEE (NON-PLAYERS)
+        else if(directEntity == livingAttacker && livingAttacker != null) {
+            manageNonPlayerMelee(e);
+        }
+        else {
+            manageOtherProjectiles(e);
+        }
     }
 
     //--------------------------------------------------------DAMAGE CALCULATIONS--------------------------------------------------------
@@ -317,5 +341,18 @@ public class DamageManager {
             }
         }
         return isOtherSpell;
+    }
+
+    public static HashMap<String, Float> copy(HashMap<String, Float> elementalData) {
+
+        HashMap<String, Float> copy = new HashMap<>(elementalData);
+        return copy;
+    }
+
+    public static boolean isCrit(HashMap<String, Float> preCritData, HashMap<String, Float> postCritData) {
+        var a = sumOfDamages(preCritData);
+        var b = sumOfDamages(postCritData);
+
+        return b > a;
     }
 }

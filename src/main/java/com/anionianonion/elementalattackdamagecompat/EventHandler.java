@@ -3,6 +3,7 @@ package com.anionianonion.elementalattackdamagecompat;
 import com.anionianonion.elementalattackdamagecompat.ailments.Ailment;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentDataHelper;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentModifierHelper;
+import com.anionianonion.elementalattackdamagecompat.items.BrittleBootsItem;
 import com.anionianonion.elementalattackdamagecompat.items.ScorchHelmetItem;
 import io.redspace.ironsspellbooks.api.events.SpellDamageEvent;
 import io.redspace.ironsspellbooks.damage.SpellDamageSource;
@@ -81,6 +82,17 @@ public class EventHandler {
         else if(DamageManager.isCustomSpellDamageSource(damageSource)) {
                 DamageManager.manageOtherSpells(e);
         }
+        AilmentDataHelper.getOptional(e.getEntity()).ifPresent(cap -> {
+            cap.getAilments().forEach((ailment, inst) -> {
+                ElementalAttackDamageCompatMod.LOGGER.info(
+                        "{} → strength={}, duration={} ticks",
+                        ailment,
+                        inst.effectStrength,
+                        inst.getDuration()
+                );
+            });
+        });
+
     }
 
     @SubscribeEvent
@@ -103,7 +115,7 @@ public class EventHandler {
         var data = AttributeHelpers.getBasicElementalData(caster, livingDefender,true, Map.entry(spellSchoolName, originalTotalDamage));
 
         AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, true);
-        AttributeHelpers.multiplyWithCritDamageIfCrit(data, caster, true);
+        AttributeHelpers.multiplyWithCritDamageIfCrit(data, caster, livingDefender,true);
         AttributeHelpers.multiplyWithSpellSuppressionIfSuppressed(data, livingDefender);
 
         float baseTotalElementalSpellDamage = DamageManager.sumOfDamages(data);
@@ -189,10 +201,11 @@ public class EventHandler {
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+        if (event.phase != TickEvent.Phase.END || event.side.isClient()) return;
 
         var player = event.player;
         var mods = AilmentModifierHelper.getMutable(player);
+        if(mods == null) return;
 
         boolean wearingHelmet =
                 player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof ScorchHelmetItem;
@@ -201,6 +214,16 @@ public class EventHandler {
             mods.setReplacement(Ailment.IGNITE, Ailment.SCORCH);
         } else {
             mods.setReplacement(Ailment.IGNITE, null); // remove override
+        }
+
+        boolean wearingBoots =
+                player.getItemBySlot(EquipmentSlot.FEET).getItem() instanceof BrittleBootsItem;
+        if(wearingBoots) {
+            mods.setReplacement(Ailment.FREEZE, Ailment.BRITTLE);
+            mods.setReplacement(Ailment.SHOCK, Ailment.SAP);
+        } else {
+            mods.setReplacement(Ailment.FREEZE, null);
+            mods.setReplacement(Ailment.SHOCK, null);
         }
     }
 

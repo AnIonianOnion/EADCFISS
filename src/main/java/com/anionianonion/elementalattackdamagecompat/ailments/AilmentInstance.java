@@ -8,6 +8,8 @@ public class AilmentInstance {
     public float sourceDamage;
     private int duration;
     private int tickCounter;
+    public float effectStrength;
+    public LivingEntity storedTarget;
 
     public AilmentInstance(AilmentEffect effect, float sourceDamage, int duration) {
         this.effect = effect;
@@ -20,7 +22,7 @@ public class AilmentInstance {
     }
 
     public void onExpire(LivingEntity entity, AilmentInstance instance) {
-        this.effect.onExpire(entity, instance);
+        this.effect.onExpireExtraFunction(entity, instance);
     }
 
     public boolean tickDown() {
@@ -30,6 +32,10 @@ public class AilmentInstance {
 
     public int getTickCounter() {
         return tickCounter;
+    }
+
+    public int getDuration() {
+        return duration;
     }
 
     public void incrementTickCounter() {

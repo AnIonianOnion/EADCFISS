@@ -21,6 +21,22 @@ public class ModItems {
                     )
             );
 
+    public static final RegistryObject<Item> SAP_CHESTPLATE =
+            ITEMS.register("sap_chestplate",
+                    () -> new SapChestplateItem(
+                            ArmorMaterials.DIAMOND,
+                            new Item.Properties()
+                    )
+            );
+
+    public static final RegistryObject<Item> BRITTLE_BOOTS =
+            ITEMS.register("brittle_boots",
+                    () -> new BrittleBootsItem(
+                            ArmorMaterials.DIAMOND,
+                            new Item.Properties()
+                    )
+            );
+
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

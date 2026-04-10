@@ -15,4 +15,10 @@ public class AilmentDataHelper {
         return getOptional(entity).orElseThrow(() ->
                 new IllegalStateException("Missing AilmentData capability"));
     }
+
+    public static AilmentInstance getAilment(LivingEntity entity, Ailment ailment) {
+        return getOptional(entity)
+                .map(cap -> cap.getAilments().get(ailment))
+                .orElse(null);
+    }
 }

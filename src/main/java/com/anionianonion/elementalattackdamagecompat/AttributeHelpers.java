@@ -1,5 +1,8 @@
 package com.anionianonion.elementalattackdamagecompat;
 
+import com.anionianonion.elementalattackdamagecompat.ailments.Ailment;
+import com.anionianonion.elementalattackdamagecompat.ailments.AilmentDataHelper;
+import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -32,7 +35,7 @@ public class AttributeHelpers {
             });
         }
 
-        addShockEffectToIncreasesAndDecreases(elementalIncreasesAndDecreases, livingDefender);
+        addShockEffectToDamageIncreasesAndDecreases(elementalIncreasesAndDecreases, livingDefender);
 
         for(Map.Entry<String, Float> entry : elementalIncreasesAndDecreases.entrySet()) {
             result.compute(entry.getKey(), (key, value) -> {
@@ -136,22 +139,45 @@ public class AttributeHelpers {
         for(String elementalAttributeName : ModAttributes.ELEMENTAL_ATTRIBUTE_NAMES) {
             //Enemy resistances
             //this line deals with resistances from the main mod ISS
-            Float elementalResistance = ModAttributes.getAttributeValue(livingDefender, String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName));
+            //todo: this returns the final value of elemental resistance, which is already affected by its own increases/decreases & more.
+            //Float elementalResistance = ModAttributes.getAttributeValue(livingDefender, String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName));
+
+            Attribute specificEleRes = ModAttributes.getAttribute(String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName));
+            Attribute allAroundEleRes = ModAttributes.getAttribute(String.format("%s:all_elemental_resistances", ElementalAttackDamageCompatMod.MOD_ID));
+
+            Float baseSpecificEleResAmount = getBaseTotal(livingDefender, specificEleRes);
+
 
             //deals with custom school resistances from other mods, by registering it ourselves
-            if(elementalResistance == null && ModAttributes.customSchoolToResistAttributeKey.containsKey(elementalAttributeName)) {
+            if(baseSpecificEleResAmount == null && ModAttributes.customSchoolToResistAttributeKey.containsKey(elementalAttributeName)) {
                 //todo: replace elementalAttributeName with ?
-                elementalResistance = ModAttributes.getAttributeValue(livingDefender, ModAttributes.customSchoolToResistAttributeKey.get(elementalAttributeName));
+                //elementalResistance = ModAttributes.getAttributeValue(livingDefender, ModAttributes.customSchoolToResistAttributeKey.get(elementalAttributeName));
+                specificEleRes = ModAttributes.getAttribute(ModAttributes.customSchoolToResistAttributeKey.get(elementalAttributeName));
+                baseSpecificEleResAmount = getBaseTotal(livingDefender, specificEleRes);
             }
 
-            if(elementalResistance == null) elementalResistance = 1f; //by default, what elemental resistances are.
+            //if(elementalResistance == null) elementalResistance = 1f; //by default, what elemental resistances are.
+            if(baseSpecificEleResAmount == null) baseSpecificEleResAmount = 1f;
+
+            Float baseAllAroundEleResAmount = getBaseTotal(livingDefender, allAroundEleRes);
+            if(baseAllAroundEleResAmount == null) baseAllAroundEleResAmount = 0f;
+
+            float totalBaseResistance = baseSpecificEleResAmount + baseAllAroundEleResAmount;
+            float netIncreasedRes = getNetIncrease(livingDefender, allAroundEleRes) + getNetIncrease(livingDefender, specificEleRes);
+            float effectiveMoreRes = (1 + getEffectiveMore(livingDefender, allAroundEleRes)) * (1 + getEffectiveMore(livingDefender, specificEleRes));
+
+            float elementalResistance = totalBaseResistance * (1 + netIncreasedRes) * effectiveMoreRes;
 
             elementalResistanceData.put(elementalAttributeName, elementalResistance);
         }
 
         return elementalResistanceData;
     }
-    public static HashMap<String, Float> getCritData(LivingEntity livingAttackerOrCaster, boolean isSpell) {
+    /**
+    This data's crit chance takes into account attacker's crit chance values, as well as defender's brittle ailmentEffect value.
+     Values may be accessed by doing .get("crit_chance"); or .get("crit_damage");
+     */
+    public static HashMap<String, Float> getCritData(LivingEntity livingAttackerOrCaster, LivingEntity livingDefender, boolean isSpell) {
 
         HashMap<String, Float> critData = new HashMap<>();
         Attribute critChance, critDamage, secondaryCritChance, secondaryCritDamage;
@@ -193,7 +219,10 @@ public class AttributeHelpers {
         secondaryCritChanceBaseAmount = getBaseTotal(livingAttackerOrCaster, secondaryCritChance);
         secondaryCritDamageBaseAmount = getBaseTotal(livingAttackerOrCaster, secondaryCritDamage);
 
-        critChanceBaseAmount += secondaryCritChanceBaseAmount + (float) Config.modCompatCritChanceOffset;
+        AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, Ailment.BRITTLE);
+        float brittle = instance != null ? instance.effectStrength : 0f;
+
+        critChanceBaseAmount += secondaryCritChanceBaseAmount + (float) Config.modCompatCritChanceOffset + brittle;
         critDamageBaseAmount += secondaryCritDamageBaseAmount + (float) Config.modCompatCritDamageOffset;
 
         critChanceNetIncreaseAmount = getNetIncrease(livingAttackerOrCaster, critChance) + getNetIncrease(livingAttackerOrCaster, secondaryCritChance);
@@ -208,9 +237,9 @@ public class AttributeHelpers {
         return critData;
     }
 
-    public static void addShockEffectToIncreasesAndDecreases(HashMap<String, Float> elementalIncreasesAndDecreasesData, LivingEntity livingDefender) {
-        Float shockEffectValue = ModAttributes.getAttributeValue(livingDefender, String.format("%s:extra_damage_taken.shock", ElementalAttackDamageCompatMod.MOD_ID));
-        if(shockEffectValue == null) shockEffectValue = 0f;
+    public static void addShockEffectToDamageIncreasesAndDecreases(HashMap<String, Float> elementalIncreasesAndDecreasesData, LivingEntity livingDefender) {
+        AilmentInstance ailmentInstance = AilmentDataHelper.getAilment(livingDefender, Ailment.SHOCK);
+        float shockEffectValue = ailmentInstance != null ? ailmentInstance.effectStrength : 0f;
 
         for(String key : elementalIncreasesAndDecreasesData.keySet()) {
             elementalIncreasesAndDecreasesData.merge(key, shockEffectValue, Float::sum);
@@ -239,6 +268,9 @@ public class AttributeHelpers {
 
                 float clampedElementalResistance = Math.max(cappedResistance, hardflooredResist); //because we set the softcap/hardcap (aka. max) and the hardfloor (aka. min), and only want the resist to be between these values
 
+                AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, Ailment.SCORCH);
+                float scorch = instance != null ? instance.effectStrength : 0f;
+                clampedElementalResistance -= scorch;
                 //verified formula
                 //let's say you deal 100 fire damage, and the enemy has 25% fire resist.
                 //then value is 100. flooredResistance is 0.25. So you deal 100 * (1 - .25) = 100 * 0.75 = 75 fire damage.
@@ -253,14 +285,14 @@ public class AttributeHelpers {
             );
         }
     }
-    public static void multiplyWithCritDamageForArrowsIfCrit(HashMap<String, Float> elementalData, LivingEntity livingAttacker, Arrow arrow) {
+    public static void multiplyWithCritDamageForArrowsIfCrit(HashMap<String, Float> elementalData, LivingEntity livingAttacker, LivingEntity livingDefender, Arrow arrow) {
         if(arrow.isCritArrow() && Config.disableVanillaFullyChargedBowCrit) {
-            arrow.setCritArrow(rollForIfAttacksOrSpellsCrit(livingAttacker, false));
+            arrow.setCritArrow(rollForIfAttacksOrSpellsCrit(livingAttacker, livingDefender, false));
         }
 
         if(!arrow.isCritArrow()) return;
 
-        HashMap<String, Float> critData = getCritData(livingAttacker, false);
+        HashMap<String, Float> critData = getCritData(livingAttacker, livingDefender, false);
         float critMultiplier = critData.get("crit_damage");
 
         for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
@@ -269,12 +301,12 @@ public class AttributeHelpers {
             );
         }
     }
-    public static void multiplyWithCritDamageIfCrit(HashMap<String, Float> elementalData, LivingEntity livingAttackerOrCaster, boolean isSpell) {
+    public static void multiplyWithCritDamageIfCrit(HashMap<String, Float> elementalData, LivingEntity livingAttackerOrCaster, LivingEntity livingDefender, boolean isSpell) {
 
-        boolean isCrit = rollForIfAttacksOrSpellsCrit(livingAttackerOrCaster, isSpell);
+        boolean isCrit = rollForIfAttacksOrSpellsCrit(livingAttackerOrCaster, livingDefender, isSpell);
         if(!isCrit) return;
 
-        HashMap<String, Float> critData = getCritData(livingAttackerOrCaster, isSpell);
+        HashMap<String, Float> critData = getCritData(livingAttackerOrCaster, livingDefender, isSpell);
         float critMultiplier = critData.get("crit_damage");
 
         for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
@@ -283,13 +315,13 @@ public class AttributeHelpers {
             );
         }
     }
-    public static void multiplyWithCritDamageIfMeleeCrit(HashMap<String, Float> elementalData, LivingEntity livingAttacker) {
+    public static void multiplyWithCritDamageIfMeleeCrit(HashMap<String, Float> elementalData, LivingEntity livingAttacker, LivingEntity livingDefender) {
         boolean isFallCrit = !livingAttacker.onGround() && livingAttacker.fallDistance > 0 && !Config.disableVanillaFallingCrit;
-        boolean isCrit = rollForIfAttacksOrSpellsCrit(livingAttacker, false);
+        boolean isCrit = rollForIfAttacksOrSpellsCrit(livingAttacker, livingDefender, false);
 
         if(!isFallCrit && !isCrit) return;
 
-        HashMap<String, Float> critData = getCritData(livingAttacker, false);
+        HashMap<String, Float> critData = getCritData(livingAttacker, livingDefender, false);
         float critMultiplier = critData.get("crit_damage");
 
         for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
@@ -315,10 +347,21 @@ public class AttributeHelpers {
             );
         }
     }
+    public static void applyLessDamageFromPossibleSapEffects(HashMap<String, Float> elementalData, LivingEntity livingAttacker) {
+        AilmentInstance instance = AilmentDataHelper.getAilment(livingAttacker, Ailment.SAP);
+        float sap = instance != null ? instance.effectStrength : 0f;
+        float dmgMultiplier = 1 - sap;
 
-    public static boolean rollForIfAttacksOrSpellsCrit(LivingEntity livingAttacker, boolean isSpell) {
+        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
+            elementalData.compute(entry.getKey(), (key, value) ->
+               value * dmgMultiplier
+            );
+        }
+    }
+
+    public static boolean rollForIfAttacksOrSpellsCrit(LivingEntity livingAttacker, LivingEntity livingDefender, boolean isSpell) {
         Float critChance;
-        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, isSpell);
+        HashMap<String, Float> critData = AttributeHelpers.getCritData(livingAttacker, livingDefender, isSpell);
         critChance = critData.get("crit_chance");
 
         float critRoll = (float) Math.random();
@@ -437,14 +480,15 @@ public class AttributeHelpers {
      * @return effectiveMore as a Float from a percent notation converted to decimal. -0.1 is 10% less, 0 is the same (no more or less). 0.5 is 50% more, 1 is 100% more, 2 is 200% more and so on.
      */
     public static Float getEffectiveMore(LivingEntity livingEntity, Attribute attribute) {
-        float effectiveMore = 1;
+        float multiplier = 1;
         if(attribute != null && livingEntity.getAttribute(attribute) != null) {
             List<AttributeModifier> moreOrLessDamageModifiers = filterAttributeModifiersByOperation(livingEntity, attribute, AttributeModifier.Operation.MULTIPLY_TOTAL);
             for(AttributeModifier attributeModifier : moreOrLessDamageModifiers) {
-                effectiveMore *= 1 + (float) attributeModifier.getAmount();
+                multiplier *= 1 + (float) attributeModifier.getAmount();
             }
         }
-        return effectiveMore - 1;
+        float effectiveMore = multiplier - 1;
+        return effectiveMore;
     }
 
     //gets a list of schools based on the group #
@@ -469,5 +513,52 @@ public class AttributeHelpers {
                 .stream()
                 .filter(attributeModifier -> attributeModifier.getOperation() == operation)
                 .toList();
+    }
+
+    public static float getSharedEffectiveMultiplier(LivingEntity livingEntity, List<String> validSharedAttributeKeys) {
+        if(validSharedAttributeKeys.isEmpty()) {
+            return 1;
+        }
+
+        float overallNetIncrease = 0;
+        float multiplier = 1; //0% more damage
+
+        for(var key : validSharedAttributeKeys) {
+
+            Attribute attribute = ModAttributes.getAttribute(key);
+            float netIncreaseForAttribute = getNetIncrease(livingEntity, attribute);
+            float effectiveMoreForAttribute = getEffectiveMore(livingEntity, attribute);
+
+            overallNetIncrease += netIncreaseForAttribute;
+            multiplier *= (1 + effectiveMoreForAttribute);
+        }
+        return (1 + overallNetIncrease) * multiplier;
+    }
+
+    public static float getNonDamagingAilmentEffectMultiplier(LivingEntity livingAttackerOrCaster, String ailmentEffectName) {
+        return AttributeHelpers.getSharedEffectiveMultiplier(livingAttackerOrCaster,
+                List.of(
+                        String.format("%s:%s_effect", ElementalAttackDamageCompatMod.MOD_ID, ailmentEffectName),
+                        String.format("%s:nondamaging_ailment_effect", ElementalAttackDamageCompatMod.MOD_ID)
+                )
+        );
+    }
+
+    public static float getNonDamagingAilmentDurationMultiplier(LivingEntity livingAttackerOrCaster, String ailmentEffectName) {
+        return AttributeHelpers.getSharedEffectiveMultiplier(livingAttackerOrCaster,
+                List.of(
+                        String.format("%s:%s_duration", ElementalAttackDamageCompatMod.MOD_ID, ailmentEffectName),
+                        String.format("%s:nondamaging_ailment_duration", ElementalAttackDamageCompatMod.MOD_ID)
+                )
+        );
+    }
+
+    public static float getDamagingAilmentDurationMultiplier(LivingEntity livingAttackerOrCaster, String ailmentEffectName) {
+        return AttributeHelpers.getSharedEffectiveMultiplier(livingAttackerOrCaster,
+                List.of(
+                        String.format("%s:%s_duration", ElementalAttackDamageCompatMod.MOD_ID, ailmentEffectName),
+                        String.format("%s:damaging_ailment_duration", ElementalAttackDamageCompatMod.MOD_ID)
+                )
+        );
     }
 }

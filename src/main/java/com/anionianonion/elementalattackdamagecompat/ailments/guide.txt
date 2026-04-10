@@ -1,0 +1,50 @@
+Definitions:
+netIncrease: describes sum of every MULTIPLY_BASE attribute modifiers of values from a set of attributes.
+effectiveMore: describes product of every (1 + MULTIPLY_TOTAL) attribute modifiers of values from a set of attributes.
+
+Pipeline:
+LivingDamageEvent triggered
+            |
+            v
+      manageDamage (deals damage based on player melee, other entity melee,
+      bow arrow shots, other projectiles that aren't throwables, and custom spell types outside of ISS,
+      that should be considered spell damage)
+           |
+           X
+      ------------------------------------------------------------------------------
+          1. gets elemental damage data of attacker,
+            a. PoE style -> flat damage added together, then multiplied by (1 + netIncrease + Shock), then multiplied by 1 + effectiveMore.
+          2. applies crit
+              player melee: check if player is falling.
+                  if they are, check config option that disables fallCrit
+                      if false, player crits
+                      if true, player doesn't crit.
+                  roll for crit
+                  if neither should crit, don't apply crit.
+              bows: check if bow is fully charged
+                  if it is, check config option for option that disables fully charged bow crits.
+                    if false, player crits
+                    if true, player doesn't crit
+                  roll for crit.
+                  if neither should crit, don't crit.
+              otherwise: roll for crit normally.
+          3. gets elemental resists of defender
+              a. adds raw specific and all-resists together, then multiply by (1 + netIncrease) * (1 + effectiveMore).
+          4. applies damage reduction from elemental resistances
+              - caps resistances to defender's specific elemntal max resistances
+              - ele res's final flat reduction is further reduced by Scorch across the board.
+              - final flat reduction is further reduced by specific values for elemental penetration
+              - final flat reduction is further reduced by specific values for elemental exposure.
+          5. applies spell suppression if it is a spell.
+          6. round and use penultimateDamage if config option is true.
+          7. because 2-5 transform the original HashMap from #1, we can use its final data to apply ailments based on individual values.
+             Apply Ignite or Scorch
+             Apply Chill&Freeze, or Brittle
+             Apply Shock or Sap
+             Apply Poison
+             Apply Bleed
+             etc.
+      ------------------------------------------
+      NonDamagingAilmentEffect - NonDamagingAilmentEffect is an abstract class, and each child NDAE
+      (except for Freeze) should override computeVariableEffectStrength. Freeze is a boolean state, (either the entity is frozen, or not at all),
+      so effectStrength shouldn't be used. instead, Freeze has a variableDuration, but other NDAs in PoE don't; they have a base duration.
