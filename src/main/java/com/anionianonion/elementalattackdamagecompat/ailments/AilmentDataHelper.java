@@ -16,9 +16,11 @@ public class AilmentDataHelper {
                 new IllegalStateException("Missing AilmentData capability"));
     }
 
-    public static AilmentInstance getAilment(LivingEntity entity, Ailment ailment) {
+    public static AilmentInstance getAilment(LivingEntity entity, String ailment) {
         return getOptional(entity)
                 .map(cap -> cap.getAilments().get(ailment))
                 .orElse(null);
     }
 }
+
+//todo: fix ailments not applying when I switched from enums to Strings

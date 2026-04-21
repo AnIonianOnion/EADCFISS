@@ -1,6 +1,5 @@
 package com.anionianonion.elementalattackdamagecompat;
 
-import com.anionianonion.elementalattackdamagecompat.ailments.Ailment;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentDataHelper;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentModifierHelper;
 import com.anionianonion.elementalattackdamagecompat.items.BrittleBootsItem;
@@ -82,17 +81,30 @@ public class EventHandler {
         else if(DamageManager.isCustomSpellDamageSource(damageSource)) {
                 DamageManager.manageOtherSpells(e);
         }
-        AilmentDataHelper.getOptional(e.getEntity()).ifPresent(cap -> {
-            cap.getAilments().forEach((ailment, inst) -> {
-                ElementalAttackDamageCompatMod.LOGGER.info(
-                        "{} → strength={}, duration={} ticks",
-                        ailment,
-                        inst.effectStrength,
-                        inst.getDuration()
-                );
-            });
-        });
 
+        if(Config.enableDebugMode) {
+            AilmentDataHelper.getOptional(e.getEntity()).ifPresent(cap -> {
+                cap.getAilments().forEach((ailment, inst) -> {
+                    ElementalAttackDamageCompatMod.LOGGER.info(
+                            "{} → strength={}, duration={} ticks",
+                            ailment,
+                            inst.effectStrength,
+                            inst.getDuration()
+                    );
+                });
+            });
+        }
+
+        if(livingAttacker instanceof ServerPlayer serverPlayerAttacker) {
+            serverPlayerAttacker.sendSystemMessage(Component.literal(
+                    "You dealt " + e.getAmount() + " damage."
+            ));
+        }
+        if(e.getEntity() instanceof ServerPlayer serverPlayerDefender) {
+            serverPlayerDefender.sendSystemMessage(Component.literal(
+                    "You took " + e.getAmount() + " damage!"
+            ));
+        }
     }
 
     @SubscribeEvent
@@ -189,10 +201,8 @@ public class EventHandler {
     public static void onLivingTick(LivingEvent.LivingTickEvent e) {
         LivingEntity entity = e.getEntity();
 
-        // Only tick ailments on the server
-        if (entity.level().isClientSide) {
-            return;
-        }
+        if (entity.level().isClientSide()) return;
+
 
         AilmentDataHelper.getOptional(entity).ifPresent(cap -> {
             cap.tick(entity);
@@ -201,30 +211,15 @@ public class EventHandler {
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END || event.side.isClient()) return;
+        if (event.phase != TickEvent.Phase.END) return;
 
         var player = event.player;
-        var mods = AilmentModifierHelper.getMutable(player);
-        if(mods == null) return;
 
-        boolean wearingHelmet =
-                player.getItemBySlot(EquipmentSlot.HEAD).getItem() instanceof ScorchHelmetItem;
+        if(player.level().isClientSide()) return;
 
-        if (wearingHelmet) {
-            mods.setReplacement(Ailment.IGNITE, Ailment.SCORCH);
-        } else {
-            mods.setReplacement(Ailment.IGNITE, null); // remove override
-        }
-
-        boolean wearingBoots =
-                player.getItemBySlot(EquipmentSlot.FEET).getItem() instanceof BrittleBootsItem;
-        if(wearingBoots) {
-            mods.setReplacement(Ailment.FREEZE, Ailment.BRITTLE);
-            mods.setReplacement(Ailment.SHOCK, Ailment.SAP);
-        } else {
-            mods.setReplacement(Ailment.FREEZE, null);
-            mods.setReplacement(Ailment.SHOCK, null);
-        }
+        AilmentModifierHelper.getOptional(player).ifPresent(cap -> {
+            cap.setExtraStacks("viral", 6);
+        });
     }
 
 }

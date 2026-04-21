@@ -1,17 +1,19 @@
 package com.anionianonion.elementalattackdamagecompat;
 
-import com.anionianonion.elementalattackdamagecompat.ailments.Ailment;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentDataHelper;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 public class AttributeHelpers {
@@ -145,22 +147,23 @@ public class AttributeHelpers {
             Attribute specificEleRes = ModAttributes.getAttribute(String.format("irons_spellbooks:%s_magic_resist", elementalAttributeName));
             Attribute allAroundEleRes = ModAttributes.getAttribute(String.format("%s:all_elemental_resistances", ElementalAttackDamageCompatMod.MOD_ID));
 
-            Float baseSpecificEleResAmount = getBaseTotal(livingDefender, specificEleRes);
-
-
-            //deals with custom school resistances from other mods, by registering it ourselves
-            if(baseSpecificEleResAmount == null && ModAttributes.customSchoolToResistAttributeKey.containsKey(elementalAttributeName)) {
-                //todo: replace elementalAttributeName with ?
-                //elementalResistance = ModAttributes.getAttributeValue(livingDefender, ModAttributes.customSchoolToResistAttributeKey.get(elementalAttributeName));
-                specificEleRes = ModAttributes.getAttribute(ModAttributes.customSchoolToResistAttributeKey.get(elementalAttributeName));
-                baseSpecificEleResAmount = getBaseTotal(livingDefender, specificEleRes);
+            Float baseSpecificEleResAmount;
+            if(specificEleRes != null) baseSpecificEleResAmount = getBaseTotal(livingDefender, specificEleRes) - 1;
+            else {
+                var attributeKey = ModAttributes.customSchoolToResistAttributeKey.get(elementalAttributeName);
+                specificEleRes = ModAttributes.getAttribute(attributeKey);
+                Integer offset = ModAttributes.resistAttributeKeyToResistOffset.get(attributeKey);
+                if(specificEleRes != null) {
+                    baseSpecificEleResAmount = getBaseTotal(livingDefender, specificEleRes) - 1;
+                    if(offset != null) baseSpecificEleResAmount += offset;
+                }
+                else {
+                    baseSpecificEleResAmount = 0f;
+                }
             }
 
-            //if(elementalResistance == null) elementalResistance = 1f; //by default, what elemental resistances are.
-            if(baseSpecificEleResAmount == null) baseSpecificEleResAmount = 1f;
-
             Float baseAllAroundEleResAmount = getBaseTotal(livingDefender, allAroundEleRes);
-            if(baseAllAroundEleResAmount == null) baseAllAroundEleResAmount = 0f;
+
 
             float totalBaseResistance = baseSpecificEleResAmount + baseAllAroundEleResAmount;
             float netIncreasedRes = getNetIncrease(livingDefender, allAroundEleRes) + getNetIncrease(livingDefender, specificEleRes);
@@ -219,7 +222,7 @@ public class AttributeHelpers {
         secondaryCritChanceBaseAmount = getBaseTotal(livingAttackerOrCaster, secondaryCritChance);
         secondaryCritDamageBaseAmount = getBaseTotal(livingAttackerOrCaster, secondaryCritDamage);
 
-        AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, Ailment.BRITTLE);
+        AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, "brittle");
         float brittle = instance != null ? instance.effectStrength : 0f;
 
         critChanceBaseAmount += secondaryCritChanceBaseAmount + (float) Config.modCompatCritChanceOffset + brittle;
@@ -238,7 +241,7 @@ public class AttributeHelpers {
     }
 
     public static void addShockEffectToDamageIncreasesAndDecreases(HashMap<String, Float> elementalIncreasesAndDecreasesData, LivingEntity livingDefender) {
-        AilmentInstance ailmentInstance = AilmentDataHelper.getAilment(livingDefender, Ailment.SHOCK);
+        AilmentInstance ailmentInstance = AilmentDataHelper.getAilment(livingDefender, "shock");
         float shockEffectValue = ailmentInstance != null ? ailmentInstance.effectStrength : 0f;
 
         for(String key : elementalIncreasesAndDecreasesData.keySet()) {
@@ -260,15 +263,14 @@ public class AttributeHelpers {
 
                 float hardcappedOrSoftcappedResist = Math.min(softcappedElementalResist, hardcappedResist);
 
-                //todo: check default value of generic spell resist
-                //ttackOrSpellResistance stores the result of converting the damage reduction to a scale from 0 to 1, from 1 to 2.
-                //if it as an attack, we only take into account the elemental resistance. But if it's a spell, also add in additional generic spell resistance.
-                float attackOrSpellResistance = !isSpell ? resistance - 1 : (resistance - 1) + (genericSpellResistance - 1);
+                //our resistance is now normalized on a scale from 0 to 1, where 0 is 0% resistance, and 1 is 100% resist. Negative resists work as expected.
+                //if it's spell damage, also add spell resistances, which isn't normalized, but on a scale from 1 to 2, where 1 is 0% spell resist.
+                float attackOrSpellResistance = !isSpell ? resistance : resistance + (genericSpellResistance - 1);
                 float cappedResistance = Math.min(attackOrSpellResistance, hardcappedOrSoftcappedResist);
 
                 float clampedElementalResistance = Math.max(cappedResistance, hardflooredResist); //because we set the softcap/hardcap (aka. max) and the hardfloor (aka. min), and only want the resist to be between these values
 
-                AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, Ailment.SCORCH);
+                AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, "scorch");
                 float scorch = instance != null ? instance.effectStrength : 0f;
                 clampedElementalResistance -= scorch;
                 //verified formula
@@ -316,7 +318,7 @@ public class AttributeHelpers {
         }
     }
     public static void multiplyWithCritDamageIfMeleeCrit(HashMap<String, Float> elementalData, LivingEntity livingAttacker, LivingEntity livingDefender) {
-        boolean isFallCrit = !livingAttacker.onGround() && livingAttacker.fallDistance > 0 && !Config.disableVanillaFallingCrit;
+        boolean isFallCrit = !livingAttacker.onGround() && livingAttacker.fallDistance > 0 && !livingAttacker.isInWater() && !livingAttacker.onClimbable() && !livingAttacker.isSprinting() && !livingAttacker.hasEffect(MobEffects.BLINDNESS) && !Config.disableVanillaFallingCrit;
         boolean isCrit = rollForIfAttacksOrSpellsCrit(livingAttacker, livingDefender, false);
 
         if(!isFallCrit && !isCrit) return;
@@ -348,7 +350,7 @@ public class AttributeHelpers {
         }
     }
     public static void applyLessDamageFromPossibleSapEffects(HashMap<String, Float> elementalData, LivingEntity livingAttacker) {
-        AilmentInstance instance = AilmentDataHelper.getAilment(livingAttacker, Ailment.SAP);
+        AilmentInstance instance = AilmentDataHelper.getAilment(livingAttacker, "sap");
         float sap = instance != null ? instance.effectStrength : 0f;
         float dmgMultiplier = 1 - sap;
 
@@ -356,6 +358,22 @@ public class AttributeHelpers {
             elementalData.compute(entry.getKey(), (key, value) ->
                value * dmgMultiplier
             );
+        }
+    }
+    public static void applyDamageReductionFromProtection(HashMap<String, Float> elementalData, LivingEntity livingAttacker, LivingEntity livingDefender) {
+
+        int epf = EnchantmentHelper.getDamageProtection(livingDefender.getArmorSlots(), livingAttacker.damageSources().magic());
+        if(epf > 0) {
+            float reduction = Math.min(epf, 20) / 25f;
+            float multiplier = 1 - reduction;
+            for(String key : elementalData.keySet()) {
+                elementalData.compute(key, (k, v) -> v * multiplier);
+            }
+        }
+    }
+    public static void multiplyWithMultiplier(HashMap<String, Float> elementalData, float multiplier) {
+        for(String key : elementalData.keySet()) {
+            elementalData.compute(key, (k, v) -> v * multiplier);
         }
     }
 
@@ -451,7 +469,7 @@ public class AttributeHelpers {
     public static Float getBaseTotal(LivingEntity livingEntity, Attribute attribute) {
         float base = 0;
         if(attribute != null && livingEntity.getAttribute(attribute) != null) {
-            base = (float) livingEntity.getAttribute(attribute).getBaseValue();
+            base = (float) Objects.requireNonNull(livingEntity.getAttribute(attribute)).getBaseValue();
             List<AttributeModifier> addedOrSubtractedModifiers = filterAttributeModifiersByOperation(livingEntity, attribute, AttributeModifier.Operation.ADDITION);
             for(AttributeModifier attributeModifier : addedOrSubtractedModifiers) {
                 base += (float) attributeModifier.getAmount();

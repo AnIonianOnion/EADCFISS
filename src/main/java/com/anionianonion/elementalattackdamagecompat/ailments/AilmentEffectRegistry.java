@@ -1,31 +1,86 @@
 package com.anionianonion.elementalattackdamagecompat.ailments;
 
-import com.anionianonion.elementalattackdamagecompat.ailments.ailment_effects.*;
+import java.util.*;
 
-import java.util.EnumMap;
-import java.util.Map;
+import static com.anionianonion.elementalattackdamagecompat.ModUtils.normalize;
 
 public class AilmentEffectRegistry {
 
-    private static final Map<Ailment, AilmentEffect> AILMENT_TO_AILMENT_EFFECTS =
-            new EnumMap<>(Ailment.class);
+    public enum AilmentCategory { DAMAGING, NON_DAMAGING }
 
-    static {
-        // Core PoE ailments
-        AILMENT_TO_AILMENT_EFFECTS.put(Ailment.IGNITE, new IgniteEffect());
-        AILMENT_TO_AILMENT_EFFECTS.put(Ailment.CHILL, new ChillEffect());
-        AILMENT_TO_AILMENT_EFFECTS.put(Ailment.FREEZE, new FreezeEffect());
-        AILMENT_TO_AILMENT_EFFECTS.put(Ailment.SHOCK, new ShockEffect());
-        AILMENT_TO_AILMENT_EFFECTS.put(Ailment.BLEED, new BleedEffect());
-        AILMENT_TO_AILMENT_EFFECTS.put(Ailment.POISON, new PoisonEffect());
+    private static final Map<String, AilmentEffect> AILMENT_EFFECTS = new HashMap<>();
+    private static final Map<String, AilmentCategory> AILMENT_CATEGORY = new HashMap<>();
 
-        // Alternate ailments (Scorch/Brittle/Sap)
-        AILMENT_TO_AILMENT_EFFECTS.put(Ailment.SCORCH, new ScorchEffect());
-        AILMENT_TO_AILMENT_EFFECTS.put(Ailment.BRITTLE, new BrittleEffect());
-        AILMENT_TO_AILMENT_EFFECTS.put(Ailment.SAP, new SapEffect());
+    // --- REGISTRATION ---
+
+    public static void registerAilment(String ailment, AilmentCategory category, AilmentEffect effect) {
+        String key = normalize(ailment);
+
+        Objects.requireNonNull(category, "Ailment category cannot be null");
+        Objects.requireNonNull(effect, "Ailment effect cannot be null");
+
+        AILMENT_EFFECTS.put(key, effect);
+        AILMENT_CATEGORY.put(key, category);
     }
 
-    public static AilmentEffect get(Ailment ailment) {
-        return AILMENT_TO_AILMENT_EFFECTS.get(ailment);
+    public static void removeAilment(String ailment) {
+        String key = normalize(ailment);
+        AILMENT_EFFECTS.remove(key);
+        AILMENT_CATEGORY.remove(key);
+    }
+
+    // --- GETTERS ---
+
+    public static AilmentEffect getEffect(String ailment) {
+        return AILMENT_EFFECTS.get(normalize(ailment));
+    }
+
+    public static AilmentCategory getCategory(String ailment) {
+        return AILMENT_CATEGORY.get(normalize(ailment));
+    }
+
+    public static boolean isDamaging(String ailment) {
+        return getCategory(ailment) == AilmentCategory.DAMAGING;
+    }
+
+    public static boolean isNonDamaging(String ailment) {
+        return getCategory(ailment) == AilmentCategory.NON_DAMAGING;
+    }
+
+    public static Set<String> getAllAilments() {
+        return Collections.unmodifiableSet(AILMENT_EFFECTS.keySet());
+    }
+
+    // --- CATEGORY RETRIEVAL ---
+
+    public static Set<String> getAilmentsByCategory(AilmentCategory category) {
+        Set<String> result = new HashSet<>();
+
+        for (var entry : AILMENT_CATEGORY.entrySet()) {
+            if (entry.getValue() == category) {
+                result.add(entry.getKey());
+            }
+        }
+
+        return Collections.unmodifiableSet(result);
+    }
+
+    public static Set<String> getDamagingAilments() {
+        return getAilmentsByCategory(AilmentCategory.DAMAGING);
+    }
+
+    public static Set<String> getNonDamagingAilments() {
+        return getAilmentsByCategory(AilmentCategory.NON_DAMAGING);
+    }
+
+    // --- DEBUG OUTPUT ---
+
+    public static void printDebug() {
+        System.out.println("=== AILMENT REGISTRY ===");
+        for (String ailment : AILMENT_EFFECTS.keySet()) {
+            System.out.println(" - " + ailment +
+                    " [" + AILMENT_CATEGORY.get(ailment) + "]" +
+                    " → " + AILMENT_EFFECTS.get(ailment).getClass().getSimpleName());
+        }
     }
 }

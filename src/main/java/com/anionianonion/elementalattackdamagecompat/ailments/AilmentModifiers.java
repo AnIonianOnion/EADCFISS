@@ -1,65 +1,70 @@
 package com.anionianonion.elementalattackdamagecompat.ailments;
 
-import com.anionianonion.elementalattackdamagecompat.Element;
+import com.anionianonion.elementalattackdamagecompat.ModUtils;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraftforge.common.util.INBTSerializable;
 
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.anionianonion.elementalattackdamagecompat.ModUtils.normalize;
 
 public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<CompoundTag> {
 
     // Extra stacks per ailment (e.g. +1 Ignite stack)
-    private final Map<Ailment, Integer> extraStacks = new EnumMap<>(Ailment.class);
+    private final Map<String, Integer> extraStacks = new HashMap<>();
 
     // Replacements: original → replacement (e.g. IGNITE → SHOCK)
-    private final Map<Ailment, Ailment> replacements = new EnumMap<>(Ailment.class);
+    private final Map<String, String> replacements = new HashMap<>();
 
     // Alternates: element → list of ailments (e.g. FIRE → [SCORCH])
-    private final Map<Element, List<Ailment>> alternates = new EnumMap<>(Element.class);
+    private final Map<String, List<String>> alternates = new HashMap<>();
 
     @Override
-    public int extraStacks(Ailment ailment) {
-        return extraStacks.getOrDefault(ailment, 0);
+    public int getExtraStacks(String ailment) {
+        return extraStacks.getOrDefault(normalize(ailment), 0);
     }
 
     @Override
-    public Ailment replace(Ailment original) {
-        return replacements.getOrDefault(original, null);
+    public String getReplacement(String ailment) {
+        return replacements.getOrDefault(normalize(ailment), null);
     }
 
     @Override
-    public List<Ailment> alternate(Element element) {
-        return alternates.getOrDefault(element, List.of());
+    public List<String> getAlternateAilments(String element) {
+        return alternates.getOrDefault(normalize(element), List.of());
     }
 
     // --- Mutators you can call from items/ascendancies/etc. ---
 
-    public void setExtraStacks(Ailment ailment, int stacks) {
+    @Override
+    public void setExtraStacks(String ailment, int stacks) {
         if (stacks <= 0) {
-            extraStacks.remove(ailment);
+            extraStacks.remove(normalize(ailment));
         } else {
-            extraStacks.put(ailment, stacks);
+            extraStacks.put(normalize(ailment), stacks);
         }
     }
 
-    public void setReplacement(Ailment original, Ailment replacement) {
+    @Override
+    public void setReplacement(String original, String replacement) {
         if (replacement == null) {
-            replacements.remove(original);
+            replacements.remove(normalize(original));
         } else {
-            replacements.put(original, replacement);
+            replacements.put(normalize(original), normalize(replacement));
         }
     }
 
-    public void setAlternate(Element element, List<Ailment> ailments) {
+    @Override
+    public void setAlternateAilments(String element, List<String> ailments) {
         if (ailments == null || ailments.isEmpty()) {
-            alternates.remove(element);
+            alternates.remove(normalize(element));
         } else {
-            alternates.put(element, List.copyOf(ailments));
+            alternates.put(normalize(element), ailments.stream().map(ModUtils::normalize).toList());
         }
     }
 
@@ -71,20 +76,20 @@ public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<Com
 
         // extra stacks
         CompoundTag stacksTag = new CompoundTag();
-        extraStacks.forEach((a, v) -> stacksTag.putInt(a.name(), v));
+        extraStacks.forEach(stacksTag::putInt);
         tag.put("extraStacks", stacksTag);
 
         // replacements
         CompoundTag replTag = new CompoundTag();
-        replacements.forEach((orig, repl) -> replTag.putString(orig.name(), repl.name()));
+        replacements.forEach(replTag::putString);
         tag.put("replacements", replTag);
 
         // alternates
         CompoundTag altTag = new CompoundTag();
         alternates.forEach((element, list) -> {
             ListTag arr = new ListTag();
-            list.forEach(a -> arr.add(StringTag.valueOf(a.name())));
-            altTag.put(element.name(), arr);
+            list.forEach(a -> arr.add(StringTag.valueOf(a)));
+            altTag.put(element, arr);
         });
         tag.put("alternates", altTag);
 
@@ -103,26 +108,26 @@ public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<Com
         // extra stacks
         CompoundTag stacksTag = tag.getCompound("extraStacks");
         for (String key : stacksTag.getAllKeys()) {
-            extraStacks.put(Ailment.valueOf(key), stacksTag.getInt(key));
+            extraStacks.put(String.valueOf(key), stacksTag.getInt(key));
         }
 
         // replacements
         CompoundTag replTag = tag.getCompound("replacements");
         for (String key : replTag.getAllKeys()) {
             replacements.put(
-                    Ailment.valueOf(key),
-                    Ailment.valueOf(replTag.getString(key))
+                    String.valueOf(key),
+                    replTag.getString(key)
             );
         }
 
         // alternates
         CompoundTag altTag = tag.getCompound("alternates");
         for (String key : altTag.getAllKeys()) {
-            Element element = Element.valueOf(key);
+            String element = String.valueOf(key);
             ListTag arr = altTag.getList(key, Tag.TAG_STRING);
 
-            List<Ailment> list = arr.stream()
-                    .map(t -> Ailment.valueOf(t.getAsString()))
+            List<String> list = arr.stream()
+                    .map(Tag::getAsString)
                     .toList();
 
             alternates.put(element, list);

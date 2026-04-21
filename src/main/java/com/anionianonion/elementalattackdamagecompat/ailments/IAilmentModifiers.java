@@ -1,28 +1,47 @@
 package com.anionianonion.elementalattackdamagecompat.ailments;
 
-import com.anionianonion.elementalattackdamagecompat.Element;
-
 import java.util.List;
 
 public interface IAilmentModifiers {
 
     // +1 to maximum Ignite stacks, +2 to Poison stacks, etc.
-    int extraStacks(Ailment ailment);
+    int getExtraStacks(String ailment);
 
     // Replace default ailments (Ignite → Shock, Chill → Brittle, etc.)
-    Ailment replace(Ailment original);
+    String getReplacement(String original);
 
     // Override entire ailment list for an element (Fire → Scorch instead of Ignite)
-    List<Ailment> alternate(Element element);
+    List<String> getAlternateAilments(String element);
+
+    void setExtraStacks(String ailment, int stacks);
+
+    void setReplacement(String original, String replacement);
+
+    void setAlternateAilments(String element, List<String> ailments);
 
     IAilmentModifiers EMPTY = new IAilmentModifiers() {
         @Override
-        public int extraStacks(Ailment ailment) { return 0; }
+        public int getExtraStacks(String ailment) { return 0; }
 
         @Override
-        public Ailment replace(Ailment original) { return null; }
+        public String getReplacement(String original) { return null; }
 
         @Override
-        public List<Ailment> alternate(Element element) { return List.of(); }
+        public List<String> getAlternateAilments(String element) { return List.of(); }
+
+        @Override
+        public void setExtraStacks(String ailment, int stacks) {
+
+        }
+
+        @Override
+        public void setReplacement(String original, String replacement) {
+
+        }
+
+        @Override
+        public void setAlternateAilments(String element, List<String> ailments) {
+
+        }
     };
 }

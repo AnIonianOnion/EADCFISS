@@ -4,6 +4,7 @@ import com.anionianonion.elementalattackdamagecompat.AttributeHelpers;
 import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompatMod;
 import com.anionianonion.elementalattackdamagecompat.ModAttributes;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
+import com.anionianonion.elementalattackdamagecompat.ailments.NonDamagingAilmentEffect;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -12,18 +13,38 @@ public class BrittleEffect extends NonDamagingAilmentEffect {
     private static final float BASE_DURATION_IN_SECONDS = 4f;
 
     @Override
-    public void tick(LivingEntity entity, AilmentInstance instance) {
+    public void tick(LivingEntity defender, AilmentInstance instance) {
 
     }
 
     @Override
-    public void onExpireExtraFunction(LivingEntity entity, AilmentInstance instance) {
+    public void onApply(LivingEntity defender, AilmentInstance instance) {
+
+    }
+
+    @Override
+    public void onExpire(LivingEntity defender, AilmentInstance instance) {
 
     }
 
     @Override
     public float getDurationInSeconds(LivingEntity livingAttackerOrCaster) {
         return BASE_DURATION_IN_SECONDS * AttributeHelpers.getNonDamagingAilmentDurationMultiplier(livingAttackerOrCaster, "chill");
+    }
+
+    @Override
+    protected boolean usesVaryingEffectDuration() {
+        return false;
+    }
+
+    @Override
+    protected boolean usesVaryingEffectStrength() {
+        return true;
+    }
+
+    @Override
+    public float getBasicEffectStrength() {
+        return 0;
     }
 
     @Override
@@ -45,7 +66,7 @@ public class BrittleEffect extends NonDamagingAilmentEffect {
     }
 
     @Override
-    protected float computeVariableEffectDuration(float hitDamage, LivingEntity defender, LivingEntity livingAttackerOrCaster) {
+    public float computeVariableEffectDuration(float hitDamage, LivingEntity defender, LivingEntity livingAttackerOrCaster) {
         return 0;
     }
 }

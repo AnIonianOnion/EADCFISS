@@ -20,11 +20,4 @@ public class AilmentModifierHelper {
     public static IAilmentModifiers get(LivingEntity entity) {
         return getOptional(entity).orElse(IAilmentModifiers.EMPTY);
     }
-
-    public static AilmentModifiers getMutable(LivingEntity entity) {
-        return entity.getCapability(AilmentModifierCapability.INSTANCE)
-                .map(cap -> (AilmentModifiers) cap)
-                .orElse(null);
-    }
-
 }

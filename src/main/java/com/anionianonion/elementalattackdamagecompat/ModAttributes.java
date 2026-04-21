@@ -1,8 +1,7 @@
 package com.anionianonion.elementalattackdamagecompat;
 
-import com.anionianonion.elementalattackdamagecompat.ailments.Ailment;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentEffectRegistry;
-import com.anionianonion.elementalattackdamagecompat.ailments.ailment_effects.NonDamagingAilmentEffect;
+import com.anionianonion.elementalattackdamagecompat.ailments.AilmentsRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -11,19 +10,21 @@ import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.registries.RegistryObject;
 
 import java.util.*;
 
 public interface ModAttributes {
 
     DeferredRegister<Attribute> ATTRIBUTES_REGISTRY = DeferredRegister.create(ForgeRegistries.ATTRIBUTES, ElementalAttackDamageCompatMod.MOD_ID);
-    List<String> ELEMENTAL_ATTRIBUTE_NAMES = Arrays.stream(Element.values()).map(e -> e.name().toLowerCase()).toList();
-    List<String> AILMENT_NAMES = Arrays.stream(Ailment.values()).map(a -> a.name().toLowerCase()).toList();
-    List<String> NON_DAMAGING_AILMENT_NAMES = AILMENT_NAMES.stream().filter(a -> AilmentEffectRegistry.get(Ailment.valueOf(a.toUpperCase())) instanceof NonDamagingAilmentEffect).toList();
+    List<String> ELEMENTAL_ATTRIBUTE_NAMES = AilmentsRegistry.getAll().keySet().stream().toList();
+    Set<String> AILMENT_NAMES = AilmentEffectRegistry.getAllAilments();
+    Set<String> DAMAGING_AILMENT_NAMES = AilmentEffectRegistry.getDamagingAilments();
+    Set<String> NON_DAMAGING_AILMENT_NAMES = AilmentEffectRegistry.getNonDamagingAilments();
+
     int numTypes = 5;
 
     Map<String, String> customSchoolToResistAttributeKey = new HashMap<>();
+    Map<String, Integer> resistAttributeKeyToResistOffset = new HashMap<>();
 
     //based on https://www.youtube.com/watch?v=0gVO99YtaxE&t=5m48s&ab_channel=Kapitencraft
     //Changed -1 to null for more control, in case attribute values are negative.
@@ -108,7 +109,7 @@ public interface ModAttributes {
         ATTRIBUTES_REGISTRY.register("max_brittle_effect", () -> new RangedAttribute("effect.shock.max", 0.06f, 0, Double.POSITIVE_INFINITY));
 
         for(String ailmentName : AILMENT_NAMES) {
-            ATTRIBUTES_REGISTRY.register(String.format("chance_to_%s", ailmentName),
+            ATTRIBUTES_REGISTRY.register(String.format("chance_to_inflict_%s", ailmentName),
                     () -> new RangedAttribute(String.format("ailment.%s_chance", ailmentName), 0, 0, 1));
             ATTRIBUTES_REGISTRY.register(String.format("%s_duration", ailmentName),
                     () -> new RangedAttribute(String.format("ailment.%s_duration", ailmentName), 0, 0, 1));

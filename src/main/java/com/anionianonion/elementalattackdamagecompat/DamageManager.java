@@ -1,10 +1,12 @@
 package com.anionianonion.elementalattackdamagecompat;
 
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentApplier;
+import com.anionianonion.elementalattackdamagecompat.ailments.DoTDamageSource;
 import io.redspace.ironsspellbooks.damage.SpellDamageSource;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -28,23 +30,13 @@ public class DamageManager {
         if(ElementalAttackDamageCompatMod.IS_RANDOM_DAMAGE_MOD_ENABLED) return true; //don't calculate damage if the user has this mod, as the mod does this step instead.
 
         //if(damageSource.isIndirect()) return; //only affects arrows and not sweeping
-        if (damageSource.toString().contains("(sweeping)"))
-        {
-            if(Config.enableDebugMode) {
-                ElementalAttackDamageCompatMod.LOGGER.info(damageSource.toString());
-                ElementalAttackDamageCompatMod.LOGGER.info("Sweeping damage found");
-            }
-            return true;
-        }
+        if (damageSource.toString().contains("(sweeping)")) return true;
+
+        if(damageSource instanceof DoTDamageSource) return true;
 
         var attacker = damageSource.getEntity();
+        if(!(attacker instanceof LivingEntity)) return true;
 
-        if(!(attacker instanceof LivingEntity)) {
-            return true;
-        }
-
-        var directEntity = damageSource.getDirectEntity();
-        if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.info("direct entity: " + directEntity.toString());
         return damageSource instanceof SpellDamageSource; //simplified from an if statement, because it is the last check, and we can directly return the value as a result.
     }
     public static List<LivingEntity> getNearbyEnemies(Player player, LivingEntity attackedEntity) {
@@ -86,11 +78,15 @@ public class DamageManager {
         }
         return sweepingLevel;
     }
-    public static void performSweepingAttack(int sweepingLevel, float critAdjustedDamage, DamageSource damageSource, List<LivingEntity> nearbyEnemies, LivingDamageEvent e, HashMap<String, Float> elementalDamageData) {
-        e.setAmount(Math.round(critAdjustedDamage));
+    public static void performSweepingAttack(int sweepingLevel, float penultimateDamage, DamageSource damageSource, List<LivingEntity> nearbyEnemies, LivingDamageEvent e, HashMap<String, Float> elementalDamageData, boolean isCrit) {
+        float roundedPenultimateDamage = Math.round(penultimateDamage);
+        float finalDamage = Config.roundFinalDamage ? roundedPenultimateDamage : penultimateDamage;
+        e.setAmount(finalDamage);
 
-        float sweepingDamage = 1 + critAdjustedDamage * ((float) sweepingLevel / (sweepingLevel + 1));
-        int roundedSweepingDamage = Math.round(sweepingDamage);
+        float sweepingRatio = ((float) sweepingLevel / (sweepingLevel + 1));
+        float sweepingDamage = 1 + penultimateDamage * sweepingRatio;
+        float roundedSweepingDamage = Math.round(sweepingDamage);
+        float finalSweepingDamage = Config.roundFinalDamage ? roundedSweepingDamage : sweepingDamage;
 
         // Create a sweeping-specific damage source
         DamageSource sweepingSource = new DamageSource(damageSource.typeHolder(), damageSource.getDirectEntity()) {
@@ -100,15 +96,25 @@ public class DamageManager {
             }
         };
 
-        nearbyEnemies.forEach(nearbyEnemy -> {
-          nearbyEnemy.hurt(sweepingSource, roundedSweepingDamage);
+        var sweepingData = copy(elementalDamageData);
+        AttributeHelpers.multiplyWithMultiplier(sweepingData, sweepingRatio);
 
-            // 2. Apply ailments AFTER damage (PoE timing)
-            AilmentApplier.critApplyAllAilmentsFromDamage(
-                    (LivingEntity) damageSource.getEntity(),
-                    nearbyEnemy,
-                    elementalDamageData
-            );
+        nearbyEnemies.forEach(nearbyEnemy -> {
+          nearbyEnemy.hurt(sweepingSource, finalSweepingDamage);
+
+            if(isCrit) {
+                AilmentApplier.critApplyAllAilmentsFromDamage(
+                        (LivingEntity) damageSource.getEntity(),
+                        nearbyEnemy,
+                        sweepingData
+                );
+            }
+            else {
+                AilmentApplier.nonCritTryToApplyAllAilmentsFromDamage(
+                        (LivingEntity) damageSource.getEntity(),
+                        nearbyEnemy,
+                        sweepingData);
+            }
         });
     }
 
@@ -195,15 +201,29 @@ public class DamageManager {
         int roundedDamage = Math.round(penultimateDamage); //remember that base damage already checks for crit.
         float finalDamage = Config.roundFinalDamage ? roundedDamage : penultimateDamage;
         ItemStack itemStack = player.getItemInHand(player.getUsedItemHand());
+                            //!player.onGround() removed, and brought outside as a coefficient, because it was inverted twice
+        boolean isFallCrit = //!player.onGround() &&
+            player.fallDistance > 0 && !player.isInWater() && !player.onClimbable() && !player.hasEffect(MobEffects.BLINDNESS) && !Config.disableVanillaFallingCrit;
+        boolean playerCanSweep = itemStack.canPerformAction(ToolActions.SWORD_SWEEP) //right tool
+                && player.onGround()
+                && !isFallCrit //not fallCritting
+                && player.getAttackStrengthScale(0.5f) > 0.9f //near full charge
+                && !player.isSprinting(); //not sprinting
 
         boolean isProjectWarDanceInstalled = ModList.get().isLoaded("wardance");
         boolean isEpicFightInstalled = ModList.get().isLoaded("epicfight");
+        boolean sweepingHandledByOtherMods = isEpicFightInstalled || isProjectWarDanceInstalled;
 
-        if(itemStack.canPerformAction(ToolActions.SWORD_SWEEP) && !(isEpicFightInstalled || isProjectWarDanceInstalled)) {
+
+
+        if(playerCanSweep && !sweepingHandledByOtherMods) {
             List<LivingEntity> nearbyEnemies = getNearbyEnemies(player, livingDefender);
             int sweepingLevel = getSweepingLevelOfPlayerWeapon(player);
 
-            performSweepingAttack(sweepingLevel, finalDamage, damageSource, nearbyEnemies, e, data); //baseDamage
+            performSweepingAttack(sweepingLevel, finalDamage, damageSource, nearbyEnemies, e, data, isCrit); //baseDamage
+
+            if(isCrit) AilmentApplier.critApplyAllAilmentsFromDamage(player, livingDefender, data);
+            else AilmentApplier.nonCritTryToApplyAllAilmentsFromDamage(player, livingDefender, data);
         }
         else {
             e.setAmount(finalDamage);
@@ -345,8 +365,7 @@ public class DamageManager {
 
     public static HashMap<String, Float> copy(HashMap<String, Float> elementalData) {
 
-        HashMap<String, Float> copy = new HashMap<>(elementalData);
-        return copy;
+        return new HashMap<>(elementalData);
     }
 
     public static boolean isCrit(HashMap<String, Float> preCritData, HashMap<String, Float> postCritData) {

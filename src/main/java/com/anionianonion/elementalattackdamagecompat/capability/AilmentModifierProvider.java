@@ -11,8 +11,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class AilmentModifierProvider implements ICapabilityProvider {
 
+    private final AilmentModifiers backend = new AilmentModifiers();
+
     private final LazyOptional<IAilmentModifiers> optional =
-            LazyOptional.of(AilmentModifiers::new); // your implementation
+            LazyOptional.of(() -> backend);
+
 
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {

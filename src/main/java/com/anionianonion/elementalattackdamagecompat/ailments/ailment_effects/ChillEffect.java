@@ -4,6 +4,7 @@ import com.anionianonion.elementalattackdamagecompat.AttributeHelpers;
 import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompatMod;
 import com.anionianonion.elementalattackdamagecompat.ModAttributes;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
+import com.anionianonion.elementalattackdamagecompat.ailments.NonDamagingAilmentEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
@@ -13,13 +14,18 @@ public class ChillEffect extends NonDamagingAilmentEffect {
     private static final float BASE_DURATION_IN_SECONDS = 2f;
 
     @Override
-    public void tick(LivingEntity entity, AilmentInstance inst) {
+    public void tick(LivingEntity defender, AilmentInstance inst) {
         int amplifier = 0; // mild slow
-        entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 10, amplifier, false, false));
+        defender.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 10, amplifier, false, false));
     }
 
     @Override
-    public void onExpireExtraFunction(LivingEntity entity, AilmentInstance instance) {
+    public void onApply(LivingEntity defender, AilmentInstance instance) {
+
+    }
+
+    @Override
+    public void onExpire(LivingEntity defender, AilmentInstance instance) {
 
     }
 
@@ -28,6 +34,21 @@ public class ChillEffect extends NonDamagingAilmentEffect {
         Float inc = AttributeHelpers.getNetIncrease(livingAttackerOrCaster, ModAttributes.getAttribute(String.format("%s:shock_duration", ElementalAttackDamageCompatMod.MOD_ID)));
         if(inc == null) inc = 0f;
         return BASE_DURATION_IN_SECONDS * (1f + inc);
+    }
+
+    @Override
+    protected boolean usesVaryingEffectDuration() {
+        return false;
+    }
+
+    @Override
+    protected boolean usesVaryingEffectStrength() {
+        return false;
+    }
+
+    @Override
+    public float getBasicEffectStrength() {
+        return 0;
     }
 
     @Override
@@ -41,7 +62,7 @@ public class ChillEffect extends NonDamagingAilmentEffect {
     }
 
     @Override
-    protected float computeVariableEffectDuration(float hitDamage, LivingEntity defender, LivingEntity livingAttackerOrCaster) {
+    public float computeVariableEffectDuration(float hitDamage, LivingEntity defender, LivingEntity livingAttackerOrCaster) {
         return 0;
     }
 }
