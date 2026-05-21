@@ -9,4 +9,5 @@ Oath of Spring Shock changes max shock effect to 2% from the default max 50%, bu
         Changing the system.
             Need a way to set variables like max stacks, and max shock effect.
                 - Just create an attribute modifier on an item that applies the alt effect to lower max shock effect.
+                - Use maxStacks methods within AilmentModifiers.
 

@@ -98,7 +98,7 @@ public class DamageManager {
         };
 
         var sweepingData = copy(elementalDamageData);
-        AttributeHelpers.multiplyWithMultiplier(sweepingData, sweepingRatio);
+        AttributeHelpers.multiplyWithConstantMultiplier(sweepingData, sweepingRatio);
 
         nearbyEnemies.forEach(nearbyEnemy -> {
           nearbyEnemy.hurt(sweepingSource, finalSweepingDamage);
@@ -196,6 +196,7 @@ public class DamageManager {
         boolean isCrit = isCrit(preCritData, data);
         AttributeHelpers.multiplyWithEnemyResistances(data, livingDefender, false);
         AttributeHelpers.applyLessDamageFromPossibleSapEffects(data, player);
+        AttributeHelpers.multiplyWithWeaponReadiness(data, player);
 
         float penultimateDamage = sumOfDamages(data);
 

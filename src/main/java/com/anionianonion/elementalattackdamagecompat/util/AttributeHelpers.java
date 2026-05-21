@@ -5,12 +5,14 @@ import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompat
 import com.anionianonion.elementalattackdamagecompat.ModAttributes;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentDataHelper;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
-import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 
@@ -18,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 public class AttributeHelpers {
@@ -42,7 +43,7 @@ public class AttributeHelpers {
             });
         }
 
-        addShockEffectToDamageIncreasesAndDecreases(elementalIncreasesAndDecreases, livingDefender);
+        addShockEffectToDamageIncreasesAndDecreases(elementalIncreasesAndDecreases, livingAttacker, livingDefender);
 
         for(Map.Entry<String, Float> entry : elementalIncreasesAndDecreases.entrySet()) {
             result.compute(entry.getKey(), (key, value) -> {
@@ -247,26 +248,28 @@ public class AttributeHelpers {
 
     public static void addShockEffectToDamageIncreasesAndDecreases(
             HashMap<String, Float> elementalIncreasesAndDecreasesData,
+            LivingEntity attacker,
             LivingEntity defender
     ) {
-        float shockEffectValue = 0f;
+        AilmentInstance shock = AilmentDataHelper.getAilment(defender, "shock");
+        AilmentInstance oosShock = AilmentDataHelper.getAilment(defender, "oath_of_spring_shock");
 
-        var entrySet = AilmentDataHelper.get(defender).getAilmentsOnEntity().entrySet();
-        if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.info("Applying shock's entry set: " + entrySet);
-
-        for (var entry : entrySet) {
-            String id = entry.getKey();
-            var inst = entry.getValue();
-
-            if (id.endsWith("shock")) { // catches: shock, oath_of_spring_shock, etc.
-                shockEffectValue += inst.totalEffectStrength;
+        if(oosShock != null && Config.enableDebugMode) {
+            if(attacker instanceof ServerPlayer sp) {
+                sp.sendSystemMessage(Component.literal("OoS Shock stacks: " + oosShock.stacks.size()));
+            }
+            else {
+                ElementalAttackDamageCompatMod.LOGGER.info("OoS Shock stacks by " + attacker.getName().getString() + ": " + oosShock.stacks.size());
             }
         }
 
-        if (shockEffectValue == 0f) return;
+        float shockEffectValue = shock != null ? shock.strongestEffectStrength : 0f;
+        float ooSShockEffectValue = oosShock != null ? oosShock.totalEffectStrength : 0f;
+
+        float max = Math.max(shockEffectValue, ooSShockEffectValue);
 
         for (String key : elementalIncreasesAndDecreasesData.keySet()) {
-            elementalIncreasesAndDecreasesData.merge(key, shockEffectValue, Float::sum);
+            elementalIncreasesAndDecreasesData.merge(key, max, Float::sum);
         }
     }
 
@@ -332,11 +335,7 @@ public class AttributeHelpers {
         HashMap<String, Float> critData = getCritData(livingAttacker, livingDefender, false);
         float critMultiplier = critData.get("crit_damage");
 
-        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
-            elementalData.compute(entry.getKey(), (key, value) ->
-                    value * critMultiplier
-            );
-        }
+        multiplyWithConstantMultiplier(elementalData, critMultiplier);
     }
     public static void multiplyWithCritDamageIfCrit(HashMap<String, Float> elementalData, LivingEntity livingAttackerOrCaster, LivingEntity livingDefender, boolean isSpell) {
 
@@ -346,11 +345,7 @@ public class AttributeHelpers {
         HashMap<String, Float> critData = getCritData(livingAttackerOrCaster, livingDefender, isSpell);
         float critMultiplier = critData.get("crit_damage");
 
-        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
-            elementalData.compute(entry.getKey(), (key, value) ->
-                    value * critMultiplier
-            );
-        }
+        multiplyWithConstantMultiplier(elementalData, critMultiplier);
     }
     public static void multiplyWithCritDamageIfMeleeCrit(HashMap<String, Float> elementalData, LivingEntity livingAttacker, LivingEntity livingDefender) {
         boolean isFallCrit = !livingAttacker.onGround() && livingAttacker.fallDistance > 0 && !livingAttacker.isInWater() && !livingAttacker.onClimbable() && !livingAttacker.isSprinting() && !livingAttacker.hasEffect(MobEffects.BLINDNESS) && !Config.disableVanillaFallingCrit;
@@ -361,11 +356,7 @@ public class AttributeHelpers {
         HashMap<String, Float> critData = getCritData(livingAttacker, livingDefender, false);
         float critMultiplier = critData.get("crit_damage");
 
-        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
-            elementalData.compute(entry.getKey(), (key, value) ->
-                    value * critMultiplier
-            );
-        }
+        multiplyWithConstantMultiplier(elementalData, critMultiplier);
     }
     public static void multiplyWithSpellSuppressionIfSuppressed(HashMap<String, Float> elementalData, LivingEntity livingDefender) {
 
@@ -377,23 +368,19 @@ public class AttributeHelpers {
         float roll = (float) Math.random();
         if(spellSuppressionChance < roll) return;
 
-        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
-            Float finalSpellSuppressionPrevented = spellSuppressionPrevented;
-            elementalData.compute(entry.getKey(), (key, value) ->
-                    value * (1 - finalSpellSuppressionPrevented)
-            );
-        }
+        multiplyWithConstantMultiplier(elementalData, spellSuppressionPrevented);
     }
     public static void applyLessDamageFromPossibleSapEffects(HashMap<String, Float> elementalData, LivingEntity livingAttacker) {
         AilmentInstance instance = AilmentDataHelper.getAilment(livingAttacker, "sap");
         float sap = instance != null ? instance.strongestEffectStrength : 0f;
         float dmgMultiplier = 1 - sap;
 
-        for(Map.Entry<String, Float> entry : elementalData.entrySet()) {
-            elementalData.compute(entry.getKey(), (key, value) ->
-               value * dmgMultiplier
-            );
-        }
+        multiplyWithConstantMultiplier(elementalData, dmgMultiplier);
+    }
+    public static void multiplyWithWeaponReadiness(HashMap<String, Float> elementalData, Player player) {
+        float readiness = player.getAttackStrengthScale(0.5f);
+
+        multiplyWithConstantMultiplier(elementalData, readiness);
     }
     public static void applyDamageReductionFromProtection(HashMap<String, Float> elementalData, LivingEntity livingAttacker, LivingEntity livingDefender) {
 
@@ -406,7 +393,7 @@ public class AttributeHelpers {
             }
         }
     }
-    public static void multiplyWithMultiplier(HashMap<String, Float> elementalData, float multiplier) {
+    public static void multiplyWithConstantMultiplier(HashMap<String, Float> elementalData, float multiplier) {
         for(String key : elementalData.keySet()) {
             elementalData.compute(key, (k, v) -> v * multiplier);
         }
