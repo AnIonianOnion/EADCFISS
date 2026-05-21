@@ -8,40 +8,46 @@ import net.minecraft.world.entity.Mob;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+
+import static com.anionianonion.elementalattackdamagecompat.util.ModUtils.normalize;
 
 public class AilmentApplier {
 
-    private static void applySingleAilment(LivingEntity livingAttackerOrCaster, LivingEntity target, String ailment, float damage) {
-        AilmentEffect effect = AilmentEffectRegistry.getEffect(ailment);
-        String finalAilment = ailment.toLowerCase(Locale.ROOT).trim();
+    private static void applySingleAilment(LivingEntity livingAttackerOrCaster, LivingEntity livingDefender, String ailmentKey, float damage) {
+
+        String finalAilmentKey = normalize(ailmentKey);
+        AilmentEffect effect = AilmentEffectRegistry.getEffect(finalAilmentKey);
 
         if(effect instanceof NonDamagingAilmentEffect ndae) {
 
             float effectStrength = ndae.isUsingVaryingEffectStrength() ?
-                    ndae.computeVariableEffectStrength(damage, target, livingAttackerOrCaster) :
+                    ndae.computeVariableEffectStrength(damage, livingDefender, livingAttackerOrCaster) :
                     ndae.getBasicEffectStrength();
 
             int effectDurationInTicks = ndae.isUsingVaryingEffectDuration() ?
-                    (int) (ndae.computeVariableEffectDuration(damage, target, livingAttackerOrCaster) * 20) :
+                    (int) (ndae.computeVariableEffectDuration(damage, livingDefender, livingAttackerOrCaster) * 20) :
                     getDurationInTicks(ndae, livingAttackerOrCaster);
 
-            AilmentDataHelper.getOptional(target).ifPresent(cap -> {
-                cap.addAilment(finalAilment, effect, damage, effectDurationInTicks, target, AilmentModifierHelper.get(livingAttackerOrCaster));
-                AilmentInstance instance = cap.getAilments().get(finalAilment);
-                instance.effectStrength = effectStrength;
-
-                if(target instanceof Mob mob) {
+            AilmentDataHelper.getOptional(livingDefender).ifPresent(cap -> {
+                AilmentInstance instance = new AilmentInstance(ndae, damage, effectStrength, effectDurationInTicks);
+                if(livingDefender instanceof Mob mob) {
                     instance.storedTarget = mob.getTarget();
                 }
+                if(Config.enableDebugMode) {
+                    ElementalAttackDamageCompatMod.LOGGER.info("Ailment: " + ailmentKey);
+                    ElementalAttackDamageCompatMod.LOGGER.info("effect strength: " + effectStrength);
+                }
+
+                cap.addAilment(finalAilmentKey, instance, livingDefender);
             });
         }
         else {
-            int duration = (int) (effect.getDurationInSeconds(livingAttackerOrCaster) * 20);
+            int duration = getDurationInTicks(effect, livingAttackerOrCaster);
 
-            AilmentDataHelper.getOptional(target).ifPresent(cap -> {
-                cap.addAilment(finalAilment, effect, damage, duration, target, AilmentModifierHelper.get(livingAttackerOrCaster));
+            AilmentDataHelper.getOptional(livingDefender).ifPresent(cap -> {
+                AilmentInstance instance = new AilmentInstance(effect, damage, 0, duration);
+                cap.addAilment(finalAilmentKey, instance, livingDefender);
             });
         }
     }
@@ -89,8 +95,9 @@ public class AilmentApplier {
             // Apply each ailment
             for (String ailment : ailments) {
 
-                if(Config.enableDebugMode)
+                if(Config.enableDebugMode) {
                     ElementalAttackDamageCompatMod.LOGGER.info(ailment);
+                }
 
                 int stacks = 1 + mods.getExtraStacks(ailment);
 

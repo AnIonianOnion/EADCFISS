@@ -1,9 +1,10 @@
 package com.anionianonion.elementalattackdamagecompat.ailments.ailment_effects;
 
-import com.anionianonion.elementalattackdamagecompat.AttributeHelpers;
+import com.anionianonion.elementalattackdamagecompat.util.AttributeHelpers;
 import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompatMod;
 import com.anionianonion.elementalattackdamagecompat.ModAttributes;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
+import com.anionianonion.elementalattackdamagecompat.ailments.AilmentStackingMode;
 import com.anionianonion.elementalattackdamagecompat.ailments.NonDamagingAilmentEffect;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -16,18 +17,13 @@ public class SapEffect extends NonDamagingAilmentEffect {
     }
 
     @Override
-    public void onApply(LivingEntity defender, AilmentInstance instance) {
-
-    }
-
-    @Override
-    public void onExpire(LivingEntity defender, AilmentInstance instance) {
-
-    }
-
-    @Override
     public float getDurationInSeconds(LivingEntity livingAttackerOrCaster) {
         return BASE_DURATION_IN_SECONDS * AttributeHelpers.getNonDamagingAilmentDurationMultiplier(livingAttackerOrCaster, "sap");
+    }
+
+    @Override
+    public AilmentStackingMode getStackingMode() {
+        return AilmentStackingMode.STRONGEST_INTENSITY;
     }
 
     @Override

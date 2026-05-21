@@ -1,10 +1,12 @@
 package com.anionianonion.elementalattackdamagecompat.client;
 
 import com.anionianonion.elementalattackdamagecompat.Config;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.event.entity.player.CriticalHitEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -12,6 +14,9 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber(value = Dist.CLIENT)
 public class ClientEventHandler {
 
+    /**
+    Disables crit particles.
+     */
     @SubscribeEvent
     public static void onCriticalHit(CriticalHitEvent event) {
 
@@ -32,6 +37,18 @@ public class ClientEventHandler {
             }
         }
 
+    }
+
+    @SubscribeEvent
+    public static void onRenderLivingPre(RenderLivingEvent.Pre<?, ?> event) {
+        LivingEntity entity = event.getEntity();
+
+        // Completely suppress hurt visuals
+        if (entity.hurtTime > 0) {
+            entity.hurtTime = 0;
+            entity.hurtDuration = 0;
+            entity.hurtMarked = false;
+        }
     }
 
 

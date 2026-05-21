@@ -4,6 +4,7 @@ import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompat
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -12,19 +13,12 @@ import net.minecraftforge.fml.common.Mod;
 public class CapabilityEvents {
 
     @SubscribeEvent
-    public static void onAttachCapabilities(AttachCapabilitiesEvent<Entity> event) {
-
+    public static void onAttachLivingEntityCapabilities(AttachCapabilitiesEvent<Entity> event) {
         Entity entity = event.getObject();
 
         if (entity instanceof LivingEntity) {
-            event.addCapability(
-                    ResourceLocation.fromNamespaceAndPath(ElementalAttackDamageCompatMod.MOD_ID, "ailment_data"),
-                    new AilmentDataProvider()
-            );
-            event.addCapability(
-                    ResourceLocation.fromNamespaceAndPath(ElementalAttackDamageCompatMod.MOD_ID, "ailment_modifiers"),
-                    new AilmentModifierProvider()
-            );
+            event.addCapability(ResourceLocation.fromNamespaceAndPath(ElementalAttackDamageCompatMod.MOD_ID, "ailment_data"), new AilmentDataProvider());
+            event.addCapability(ResourceLocation.fromNamespaceAndPath(ElementalAttackDamageCompatMod.MOD_ID, "ailment_modifiers"), new AilmentModifierProvider());
         }
     }
 }

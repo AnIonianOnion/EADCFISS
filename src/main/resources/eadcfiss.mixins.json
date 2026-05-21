@@ -5,6 +5,7 @@
   "mixins": [
     "ArmorDoesntAffectElementalDamageMixin",
     "DamageSourcesMixin",
+    "PseudoEnchantmentGlintMixin",
     "SilenceDoTDamageMixin"
   ],
   "client": [

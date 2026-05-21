@@ -113,7 +113,7 @@ public class HealCommand {
 
         // Clear your custom ailments
         if (player instanceof IAilmentData iAilmentDataHolder) {
-            iAilmentDataHolder.getAilments().clear();
+            iAilmentDataHolder.getAilmentsOnEntity().clear();
         }
     }
 }

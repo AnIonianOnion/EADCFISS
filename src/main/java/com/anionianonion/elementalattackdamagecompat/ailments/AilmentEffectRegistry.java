@@ -2,7 +2,7 @@ package com.anionianonion.elementalattackdamagecompat.ailments;
 
 import java.util.*;
 
-import static com.anionianonion.elementalattackdamagecompat.ModUtils.normalize;
+import static com.anionianonion.elementalattackdamagecompat.util.ModUtils.normalize;
 
 public class AilmentEffectRegistry {
 

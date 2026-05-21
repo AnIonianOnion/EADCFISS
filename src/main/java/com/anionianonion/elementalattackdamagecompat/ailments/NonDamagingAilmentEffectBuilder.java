@@ -1,11 +1,8 @@
 package com.anionianonion.elementalattackdamagecompat.ailments;
 
-import com.anionianonion.elementalattackdamagecompat.AttributeHelpers;
+import com.anionianonion.elementalattackdamagecompat.ailments.higher_order.*;
+import com.anionianonion.elementalattackdamagecompat.util.AttributeHelpers;
 import com.anionianonion.elementalattackdamagecompat.ModAttributes;
-import com.anionianonion.elementalattackdamagecompat.ailments.higher_order.AilmentApplyFunction;
-import com.anionianonion.elementalattackdamagecompat.ailments.higher_order.AilmentExpireFunction;
-import com.anionianonion.elementalattackdamagecompat.ailments.higher_order.AilmentTickFunction;
-import com.anionianonion.elementalattackdamagecompat.api.DamageSourceBuilder;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -13,7 +10,8 @@ public class NonDamagingAilmentEffectBuilder {
 
     private String namespace;
     private String id;
-    private float baseDurationInSeconds;
+    private String altForId;
+    private int baseDurationInSeconds;
     private float effectStrength;
     private boolean doesVaryEffectStrength;
     private boolean doesVaryEffectDuration;
@@ -25,7 +23,11 @@ public class NonDamagingAilmentEffectBuilder {
     private float maxDuration;
     private AilmentTickFunction onTickFunc = (defender, instance) -> {};
     private AilmentApplyFunction onApplyFunc = (defender, instance) -> {};
-    private AilmentExpireFunction onExpireFunc = (defender, instance) -> {};;
+    private AilmentExpireFunction onExpireFunc = (defender, instance) -> {};
+    private StackPayloadFunction createStackPayloadFunc = (defender, instance) -> null;
+    private StackExpireFunction onStackExpireFunc = (defender, instance, stack, payload) -> {};
+    private AilmentStackingMode stackingMode = AilmentStackingMode.STRONGEST_WINS;
+    private int maxStacks = 1;
 
     //----------Basic---------
     public NonDamagingAilmentEffectBuilder setNamespace(String namespace) {
@@ -50,7 +52,7 @@ public class NonDamagingAilmentEffectBuilder {
         return this;
     }
 
-    public NonDamagingAilmentEffectBuilder setEffectCoefficient(float coefficient) {
+    public NonDamagingAilmentEffectBuilder setEffectStrengthCoefficient(float coefficient) {
         if(!this.doesVaryEffectStrength) throw new IllegalStateException("Effect cannot have a effect strength coefficient when you don't let the effect vary its strength, which means the effect strength is determined by the specific instance of elemental damage from the hit itself. This coefficient is used in determining the effect's strength.");
         this.effectCoefficient = coefficient;
         return this;
@@ -75,7 +77,7 @@ public class NonDamagingAilmentEffectBuilder {
         return this;
     }
 
-    public NonDamagingAilmentEffectBuilder setBaseDurationInSeconds(float baseDurationInSeconds) {
+    public NonDamagingAilmentEffectBuilder setBaseDurationInSeconds(int baseDurationInSeconds) {
         if(this.doesVaryEffectDuration) throw new IllegalStateException("Effect cannot have a base duration when you let the effect vary its duration, which means the effect duration is determined by the specific instance of elemental damage from the hit itself.");
         else this.baseDurationInSeconds = baseDurationInSeconds;
         return this;
@@ -105,6 +107,16 @@ public class NonDamagingAilmentEffectBuilder {
         return this;
     }
 
+    public NonDamagingAilmentEffectBuilder stackingMode(AilmentStackingMode mode) {
+        this.stackingMode = mode;
+        return this;
+    }
+
+    public NonDamagingAilmentEffectBuilder setMaxStacks(int maxStacks) {
+        this.maxStacks = maxStacks;
+        return this;
+    }
+
     //----------First Order Functions----------
     public NonDamagingAilmentEffectBuilder onTick(AilmentTickFunction func) {
         this.onTickFunc = func;
@@ -118,6 +130,15 @@ public class NonDamagingAilmentEffectBuilder {
         this.onExpireFunc = func;
         return this;
     }
+    public NonDamagingAilmentEffectBuilder createStackPayload(StackPayloadFunction func) {
+        this.createStackPayloadFunc = func;
+        return this;
+    }
+    public NonDamagingAilmentEffectBuilder onStackExpire(StackExpireFunction func) {
+        this.onStackExpireFunc = func;
+        return this;
+    }
+
 
     //----------Result----------
     public NonDamagingAilmentEffect build() {
@@ -140,8 +161,28 @@ public class NonDamagingAilmentEffectBuilder {
                 }
 
                 @Override
+                public void onStackExpire(LivingEntity defender, AilmentInstance inst, AilmentInstance.StackEntry stack, Object payload) {
+                    onStackExpireFunc.onStackExpire(defender, inst, stack, payload);
+                }
+
+                @Override
+                public Object createStackPayload(LivingEntity defender, AilmentInstance instance) {
+                    return createStackPayloadFunc.createPayload(defender, instance);
+                }
+
+                @Override
                 public float getDurationInSeconds(LivingEntity livingAttackerOrCaster) {
                     return baseDurationInSeconds * AttributeHelpers.getNonDamagingAilmentDurationMultiplier(livingAttackerOrCaster, id);
+                }
+
+                @Override
+                public AilmentStackingMode getStackingMode() {
+                    return stackingMode;
+                }
+
+                @Override
+                public int getMaxStacks() {
+                    return maxStacks;
                 }
 
                 @Override
@@ -174,6 +215,7 @@ public class NonDamagingAilmentEffectBuilder {
 
                 @Override
                 protected float getMaxEffectStrength(LivingEntity livingAttackerOrCaster) {
+
                     Float maxEffectStrength = ModAttributes.getAttributeValue(livingAttackerOrCaster, String.format("%s:max_%s_effect", namespace, id));
                     if(maxEffectStrength == null) maxEffectStrength = 0f;
                     return maxEffectStrength;

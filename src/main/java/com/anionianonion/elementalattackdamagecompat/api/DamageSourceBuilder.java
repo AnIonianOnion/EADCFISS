@@ -57,8 +57,8 @@ public class DamageSourceBuilder {
         return new DamageSource(holder);
     }
 
-    public static DamageSourceBuilder of(ServerLevel level, String namespace, String id) {
-        return create(level).namespace(namespace).id(id);
+    public static DamageSource ofDoT(ServerLevel level, String namespace, String id) {
+        return create(level).namespace(namespace).id(id).dot().build();
     }
 
 }

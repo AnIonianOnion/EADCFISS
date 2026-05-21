@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-import static com.anionianonion.elementalattackdamagecompat.ModUtils.normalize;
+import static com.anionianonion.elementalattackdamagecompat.util.ModUtils.normalize;
 
 public class AilmentResolver {
 

@@ -6,9 +6,9 @@ import java.util.Map;
 
 public interface IAilmentData {
 
-    void addAilment(String ailment, AilmentEffect effect, float sourceDamage, int duration, LivingEntity defender, IAilmentModifiers attackerMods);
+    void addAilment(String ailmentKey, AilmentInstance newInst, LivingEntity defender);
 
-    Map<String, AilmentInstance> getAilments();
+    Map<String, AilmentInstance> getAilmentsOnEntity();
 
     void tick(LivingEntity entity);
 }

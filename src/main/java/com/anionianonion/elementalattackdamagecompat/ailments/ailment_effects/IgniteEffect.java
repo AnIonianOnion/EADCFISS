@@ -1,7 +1,8 @@
 package com.anionianonion.elementalattackdamagecompat.ailments.ailment_effects;
 
-import com.anionianonion.elementalattackdamagecompat.AttributeHelpers;
+import com.anionianonion.elementalattackdamagecompat.util.AttributeHelpers;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
+import com.anionianonion.elementalattackdamagecompat.ailments.AilmentStackingMode;
 import com.anionianonion.elementalattackdamagecompat.ailments.DamagingAilmentEffect;
 import com.anionianonion.elementalattackdamagecompat.ailments.ModDamageSources;
 import net.minecraft.server.level.ServerLevel;
@@ -15,26 +16,26 @@ public class IgniteEffect extends DamagingAilmentEffect {
     public void tick(LivingEntity defender, AilmentInstance inst) {
 
         inst.incrementTickCounter();
-        if(inst.getTickCounter() < 20) return;
+        if(inst.isntTimeToDealDamage()) return;
         inst.resetTickCounter();
 
-        float damage = inst.sourceDamage * 0.9f;
+        float damage = inst.totalDamage * 0.9f;
 
         defender.hurt(ModDamageSources.ignite((ServerLevel) defender.level()), damage);
     }
 
     @Override
-    public void onApply(LivingEntity defender, AilmentInstance instance) {
-
-    }
-
-    @Override
-    public void onExpire(LivingEntity defender, AilmentInstance instance) {
-
-    }
-
-    @Override
     public float getDurationInSeconds(LivingEntity livingAttackerOrCaster) {
         return BASE_DURATION_IN_SECONDS * AttributeHelpers.getDamagingAilmentDurationMultiplier(livingAttackerOrCaster, "ignite");
+    }
+
+    @Override
+    public AilmentStackingMode getStackingMode() {
+        return AilmentStackingMode.STRONGEST_WINS;
+    }
+
+    @Override
+    protected int frequencyInTicks() {
+        return 20;
     }
 }

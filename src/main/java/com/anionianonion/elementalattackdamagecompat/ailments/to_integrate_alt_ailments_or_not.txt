@@ -1,0 +1,12 @@
+By integrate, I mean having a way for ailments to store properties of the alt ailment inside of the ailment.
+
+Use case:
+Oath of Spring Shock changes max shock effect to 2% from the default max 50%, but allows 50 stacks of Shock instead of 1.
+
+    Pros:
+        Keeps it minimalistic - Can share the same attributes instead of creating a separate attribute.
+    Cons:
+        Changing the system.
+            Need a way to set variables like max stacks, and max shock effect.
+                - Just create an attribute modifier on an item that applies the alt effect to lower max shock effect.
+

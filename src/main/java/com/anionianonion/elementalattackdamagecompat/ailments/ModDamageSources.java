@@ -8,14 +8,14 @@ import net.minecraft.world.damagesource.DamageSource;
 public class ModDamageSources {
 
     public static DamageSource ignite(ServerLevel level) {
-        return DamageSourceBuilder.of(level, ElementalAttackDamageCompatMod.MOD_ID, "ignite").dot().build();
+        return DamageSourceBuilder.ofDoT(level, ElementalAttackDamageCompatMod.MOD_ID, "ignite");
     }
 
     public static DamageSource bleed(ServerLevel level) {
-        return DamageSourceBuilder.of(level, ElementalAttackDamageCompatMod.MOD_ID, "bleed").dot().build();
+        return DamageSourceBuilder.ofDoT(level, ElementalAttackDamageCompatMod.MOD_ID, "bleed");
     }
 
     public static DamageSource poison(ServerLevel level) {
-        return DamageSourceBuilder.of(level, ElementalAttackDamageCompatMod.MOD_ID, "poison").dot().build();
+        return DamageSourceBuilder.ofDoT(level, ElementalAttackDamageCompatMod.MOD_ID, "poison");
     }
 }

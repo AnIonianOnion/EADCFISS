@@ -1,6 +1,6 @@
 package com.anionianonion.elementalattackdamagecompat.ailments;
 
-import com.anionianonion.elementalattackdamagecompat.ModUtils;
+import com.anionianonion.elementalattackdamagecompat.util.ModUtils;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.anionianonion.elementalattackdamagecompat.ModUtils.normalize;
+import static com.anionianonion.elementalattackdamagecompat.util.ModUtils.normalize;
 
 public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<CompoundTag> {
 
@@ -30,8 +30,8 @@ public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<Com
     }
 
     @Override
-    public String getReplacement(String ailment) {
-        return replacements.getOrDefault(normalize(ailment), null);
+    public String getReplacement(String originalAilment) {
+        return replacements.getOrDefault(normalize(originalAilment), null);
     }
 
     @Override
@@ -51,11 +51,11 @@ public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<Com
     }
 
     @Override
-    public void setReplacement(String original, String replacement) {
+    public void setReplacement(String originalAilment, String replacement) {
         if (replacement == null) {
-            replacements.remove(normalize(original));
+            replacements.remove(normalize(originalAilment));
         } else {
-            replacements.put(normalize(original), normalize(replacement));
+            replacements.put(normalize(originalAilment), normalize(replacement));
         }
     }
 

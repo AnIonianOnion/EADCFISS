@@ -2,6 +2,7 @@ package com.anionianonion.elementalattackdamagecompat;
 
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentApplier;
 import com.anionianonion.elementalattackdamagecompat.ailments.DoTDamageSource;
+import com.anionianonion.elementalattackdamagecompat.util.AttributeHelpers;
 import io.redspace.ironsspellbooks.damage.SpellDamageSource;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;

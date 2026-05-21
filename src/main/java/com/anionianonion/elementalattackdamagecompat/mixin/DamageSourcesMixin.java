@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class DamageSourcesMixin {
 
     @Inject(at = @At(value = "HEAD"), method = "getResist", remap = false, cancellable = true)
-    private static void disableResist(LivingEntity entity, SchoolType damageSchool, CallbackInfoReturnable<Float> cir) {
+    private static void disableDoubleDipResist(LivingEntity entity, SchoolType damageSchool, CallbackInfoReturnable<Float> cir) {
         cir.setReturnValue(1f);
     }
 }

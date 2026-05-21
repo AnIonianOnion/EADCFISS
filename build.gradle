@@ -125,6 +125,17 @@ repositories {
         name = "Iron's Maven - Release"
         url = "https://code.redspace.io/releases"
     }
+    maven { url "https://maven.shadowsoffire.dev/releases" }
+
+    maven { url "https://maven.theillusivec4.top/" }
+
+    maven { url "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
+
+    maven {
+        name "KosmX's maven"
+        url 'https://maven.kosmx.dev/'
+    }
+
 }
 
 dependencies {
@@ -150,7 +161,25 @@ dependencies {
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
-    implementation fg.deobf("io.redspace.ironsspellbooks:irons_spellbooks:1.20.1-3.4.0.9")
+    implementation fg.deobf("io.redspace.ironsspellbooks:irons_spellbooks:1.20.1-3.4.0.11")
+
+    runtimeOnly fg.deobf("dev.shadowsoffire:ApothicAttributes:1.20.1-1.3.7")
+    //compileOnly fg.deobf("dev.shadowsoffire:ApothicAttributes:1.20.1-1.3.7")
+
+    /*
+    runtimeOnly fg.deobf("dev.shadowsoffire:Apotheosis:1.20.1-7.4.8")
+    compileOnly fg.deobf("dev.shadowsoffire:Apotheosis:1.20.1-7.4.8")
+
+    runtimeOnly fg.deobf("dev.shadowsoffire:Placebo:1.20.1-8.6.3")
+    compileOnly fg.deobf("dev.shadowsoffire:Placebo:1.20.1-8.6.3")
+    */
+    implementation fg.deobf("dev.shadowsoffire:Apotheosis:1.20.1-7.4.8")
+    implementation fg.deobf("dev.shadowsoffire:Placebo:1.20.1-8.6.3")
+
+    runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:5.14.1+1.20.1")
+    runtimeOnly fg.deobf("top.theillusivec4.caelus:caelus-forge:3.2.0+1.20.1")
+    runtimeOnly fg.deobf("software.bernie.geckolib:geckolib-forge-1.20.1:4.8.3")
+    runtimeOnly fg.deobf("dev.kosmx.player-anim:player-animation-lib-forge:1.0.2-rc1+1.20")
 
     // Apply Mixin AP
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'

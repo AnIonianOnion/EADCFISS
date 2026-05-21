@@ -1,0 +1,28 @@
+{
+  "weight": 5,
+  "quality": 1.5,
+  "min_rarity": "epic",
+  "dimensions": [
+  ],
+  "unique": true,
+  "bonuses": [
+    {
+      "type": "apotheosis:enchantment",
+      "gem_class": {
+        "key": "weapon",
+        "types": [
+          "crossbow",
+          "bow", "heavy_weapon",
+          "trident", "sword"
+        ]
+      },
+      "enchantment": "minecraft:fire_aspect",
+      "must_exist": true,
+      "values": {
+        "epic": 1,
+        "mythic": 1,
+        "ancient": 2
+      }
+    }
+  ]
+}

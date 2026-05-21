@@ -1,7 +1,11 @@
-package com.anionianonion.elementalattackdamagecompat;
+package com.anionianonion.elementalattackdamagecompat.util;
 
+import com.anionianonion.elementalattackdamagecompat.Config;
+import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompatMod;
+import com.anionianonion.elementalattackdamagecompat.ModAttributes;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentDataHelper;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
+import net.minecraft.core.Holder;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -14,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 public class AttributeHelpers {
@@ -223,7 +228,7 @@ public class AttributeHelpers {
         secondaryCritDamageBaseAmount = getBaseTotal(livingAttackerOrCaster, secondaryCritDamage);
 
         AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, "brittle");
-        float brittle = instance != null ? instance.effectStrength : 0f;
+        float brittle = instance != null ? instance.strongestEffectStrength : 0f;
 
         critChanceBaseAmount += secondaryCritChanceBaseAmount + (float) Config.modCompatCritChanceOffset + brittle;
         critDamageBaseAmount += secondaryCritDamageBaseAmount + (float) Config.modCompatCritDamageOffset;
@@ -240,20 +245,51 @@ public class AttributeHelpers {
         return critData;
     }
 
-    public static void addShockEffectToDamageIncreasesAndDecreases(HashMap<String, Float> elementalIncreasesAndDecreasesData, LivingEntity livingDefender) {
-        AilmentInstance ailmentInstance = AilmentDataHelper.getAilment(livingDefender, "shock");
-        float shockEffectValue = ailmentInstance != null ? ailmentInstance.effectStrength : 0f;
+    public static void addShockEffectToDamageIncreasesAndDecreases(
+            HashMap<String, Float> elementalIncreasesAndDecreasesData,
+            LivingEntity defender
+    ) {
+        float shockEffectValue = 0f;
 
-        for(String key : elementalIncreasesAndDecreasesData.keySet()) {
+        var entrySet = AilmentDataHelper.get(defender).getAilmentsOnEntity().entrySet();
+        if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.info("Applying shock's entry set: " + entrySet);
+
+        for (var entry : entrySet) {
+            String id = entry.getKey();
+            var inst = entry.getValue();
+
+            if (id.endsWith("shock")) { // catches: shock, oath_of_spring_shock, etc.
+                shockEffectValue += inst.totalEffectStrength;
+            }
+        }
+
+        if (shockEffectValue == 0f) return;
+
+        for (String key : elementalIncreasesAndDecreasesData.keySet()) {
             elementalIncreasesAndDecreasesData.merge(key, shockEffectValue, Float::sum);
         }
     }
+
     public static void multiplyWithEnemyResistances(HashMap<String, Float> attackerData, LivingEntity livingDefender, boolean isSpell) {
         HashMap<String, Float> enemyElementalResistances = getElementalResistances(livingDefender);
 
         Float genericSpellResistance = ModAttributes.getAttributeValue(livingDefender, "irons_spellbooks:spell_resist");
         float hardcappedResist = 0.90f;
         float hardflooredResist = -2f;
+
+        //todo: fix scorch, and test brittle
+        AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, "scorch");
+        float scorch = instance != null ? instance.strongestEffectStrength : 0f;
+
+        if(Config.enableDebugMode) {
+            boolean isNull = instance == null;
+            ElementalAttackDamageCompatMod.LOGGER.info("instance == null? " + (isNull));
+            if(!isNull) {
+                ElementalAttackDamageCompatMod.LOGGER.info("scorch: " + scorch);
+                ElementalAttackDamageCompatMod.LOGGER.info("strongestEffectStrength: " + instance.strongestEffectStrength);
+            }
+        }
+
         for(Map.Entry<String, Float> entry : enemyElementalResistances.entrySet()) {
             attackerData.compute(entry.getKey(), (key, value) -> {
                 Float resistance = enemyElementalResistances.get(key);
@@ -270,9 +306,8 @@ public class AttributeHelpers {
 
                 float clampedElementalResistance = Math.max(cappedResistance, hardflooredResist); //because we set the softcap/hardcap (aka. max) and the hardfloor (aka. min), and only want the resist to be between these values
 
-                AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, "scorch");
-                float scorch = instance != null ? instance.effectStrength : 0f;
                 clampedElementalResistance -= scorch;
+
                 //verified formula
                 //let's say you deal 100 fire damage, and the enemy has 25% fire resist.
                 //then value is 100. flooredResistance is 0.25. So you deal 100 * (1 - .25) = 100 * 0.75 = 75 fire damage.
@@ -351,7 +386,7 @@ public class AttributeHelpers {
     }
     public static void applyLessDamageFromPossibleSapEffects(HashMap<String, Float> elementalData, LivingEntity livingAttacker) {
         AilmentInstance instance = AilmentDataHelper.getAilment(livingAttacker, "sap");
-        float sap = instance != null ? instance.effectStrength : 0f;
+        float sap = instance != null ? instance.strongestEffectStrength : 0f;
         float dmgMultiplier = 1 - sap;
 
         for(Map.Entry<String, Float> entry : elementalData.entrySet()) {

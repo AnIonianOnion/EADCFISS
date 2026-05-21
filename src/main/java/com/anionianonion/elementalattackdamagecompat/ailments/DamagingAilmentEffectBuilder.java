@@ -1,11 +1,9 @@
 package com.anionianonion.elementalattackdamagecompat.ailments;
 
-import com.anionianonion.elementalattackdamagecompat.AttributeHelpers;
+import com.anionianonion.elementalattackdamagecompat.util.AttributeHelpers;
 import com.anionianonion.elementalattackdamagecompat.ailments.higher_order.AilmentApplyFunction;
 import com.anionianonion.elementalattackdamagecompat.ailments.higher_order.AilmentExpireFunction;
 import com.anionianonion.elementalattackdamagecompat.ailments.higher_order.AilmentTickFunction;
-import com.anionianonion.elementalattackdamagecompat.api.DamageSourceBuilder;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 
 public class DamagingAilmentEffectBuilder {
@@ -17,6 +15,8 @@ public class DamagingAilmentEffectBuilder {
     private AilmentTickFunction onTickFunc = (defender, instance) -> {};
     private AilmentApplyFunction onApplyFunc = (defender, instance) -> {};
     private AilmentExpireFunction onExpireFunc = (defender, instance) -> {};
+    private AilmentStackingMode stackingMode = AilmentStackingMode.STRONGEST_WINS;
+    private int maxStacks = 1;
 
     /**
         this float will be multiplied by the ailment_instance#hit_damage in order to determine how much damage to deal as DoT per second.
@@ -42,6 +42,17 @@ public class DamagingAilmentEffectBuilder {
         return this;
     }
 
+    public DamagingAilmentEffectBuilder stackingMode(AilmentStackingMode mode) {
+        this.stackingMode = mode;
+        return this;
+    }
+
+    public DamagingAilmentEffectBuilder setMaxStacks(int maxStacks) {
+        this.maxStacks = maxStacks;
+        return this;
+    }
+
+
     //----------First Order Functions----------
     public DamagingAilmentEffectBuilder onTick(AilmentTickFunction func) {
         this.onTickFunc = func;
@@ -60,6 +71,11 @@ public class DamagingAilmentEffectBuilder {
     public DamagingAilmentEffect build() {
         if(id != null && namespace != null) return new DamagingAilmentEffect() {
             @Override
+            protected int frequencyInTicks() {
+                return 20;
+            }
+
+            @Override
             public void tick(LivingEntity defender, AilmentInstance instance) {
                 onTickFunc.tick(defender, instance);
             }
@@ -77,6 +93,16 @@ public class DamagingAilmentEffectBuilder {
             @Override
             public float getDurationInSeconds(LivingEntity livingAttackerOrCaster) {
                 return baseDurationInSeconds * AttributeHelpers.getDamagingAilmentDurationMultiplier(livingAttackerOrCaster, id);
+            }
+
+            @Override
+            public AilmentStackingMode getStackingMode() {
+                return stackingMode;
+            }
+
+            @Override
+            public int getMaxStacks() {
+                return maxStacks;
             }
         };
         return null;

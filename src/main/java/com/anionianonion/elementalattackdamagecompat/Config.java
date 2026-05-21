@@ -24,6 +24,32 @@ public class Config {
     private static final ForgeConfigSpec.BooleanValue APPLY_ATTACK_CRIT_ATTRIBUTES_GLOBALLY;
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> TYPE_1_SCHOOLS, TYPE_2_SCHOOLS, TYPE_3_SCHOOLS, TYPE_4_SCHOOLS, TYPE_5_SCHOOLS;
 
+    private static final ForgeConfigSpec.BooleanValue USE_GLOBAL_CONSTANT_FOR_ADDING_DAMAGE_FROM_ELEMENTAL_ASPECTS, USE_GLOBAL_CONSTANT_FOR_ADDING_AILMENT_CHANCE_FROM_ELEMENTAL_ASPECTS;
+    private static final ForgeConfigSpec.DoubleValue GLOBAL_CONSTANT_FOR_ADDING_DAMAGE_FROM_ELEMENTAL_ASPECTS, GLOBAL_CONSTANT_FOR_ADDING_AILMENT_CHANCE_FROM_ELEMENTAL_ASPECTS;
+
+    private static final ForgeConfigSpec.DoubleValue FIRE_ATTACK_DAMAGE_PER_FIRE_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.BooleanValue ENABLE_IGNITE_CHANCE_ON_FIRE_ASPECT;
+    private static final ForgeConfigSpec.DoubleValue IGNITE_CHANCE_PER_FIRE_ASPECT_LEVEL;
+
+    private static final ForgeConfigSpec.DoubleValue ICE_ATTACK_DAMAGE_PER_ICE_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.BooleanValue ENABLE_FREEZE_CHANCE_ON_ICE_ASPECT;
+    private static final ForgeConfigSpec.DoubleValue FREEZE_CHANCE_PER_ICE_ASPECT_LEVEL;
+
+    private static final ForgeConfigSpec.DoubleValue LIGHTNING_ATTACK_DAMAGE_PER_LIGHTNING_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.BooleanValue ENABLE_SHOCK_CHANCE_ON_LIGHTNING_ASPECT;
+    private static final ForgeConfigSpec.DoubleValue SHOCK_CHANCE_PER_LIGHTNING_ASPECT_LEVEL;
+
+    private static final ForgeConfigSpec.DoubleValue HOLY_ATTACK_DAMAGE_PER_HOLY_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.DoubleValue ENDER_ATTACK_DAMAGE_PER_ENDER_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.DoubleValue BLOOD_ATTACK_DAMAGE_PER_BLOOD_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.DoubleValue NATURE_ATTACK_DAMAGE_PER_NATURE_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.DoubleValue EVOCATION_ATTACK_DAMAGE_PER_EVOCATION_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.DoubleValue ELDRITCH_ATTACK_DAMAGE_PER_ELDRITCH_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.DoubleValue SOUND_ATTACK_DAMAGE_PER_SOUND_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.DoubleValue GEO_ATTACK_DAMAGE_PER_GEO_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.DoubleValue AQUA_ATTACK_DAMAGE_PER_AQUA_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.DoubleValue TECHNOMANCY_ATTACK_DAMAGE_PER_TECHNOMANCY_ASPECT_LEVEL;
+    private static final ForgeConfigSpec.DoubleValue ABYSSAL_ATTACK_DAMAGE_PER_ABYSSAL_ASPECT_LEVEL;
 
     static {
         COPY_WEAPONS_DEFAULT_ATTRIBUTES_TO_NEW_WEAPONS = BUILDER
@@ -123,6 +149,81 @@ public class Config {
                     .comment("Default list: []")
                     .defineListAllowEmpty("type_5_schools", List.of(), Config::validateIsString);
         BUILDER.pop();
+
+        BUILDER.push("Enchantments");
+            USE_GLOBAL_CONSTANT_FOR_ADDING_DAMAGE_FROM_ELEMENTAL_ASPECTS = BUILDER
+                    .comment("If this is true, use a global constant for adding damage from elemental Aspect enchantments, instead of each element using their own value." +
+                            "\nDefault: false")
+                    .define("useGlobalConstantForAddingDamageFromElementalAspects", false);
+            GLOBAL_CONSTANT_FOR_ADDING_DAMAGE_FROM_ELEMENTAL_ASPECTS = BUILDER
+                    .comment("This value will be multiplied by the enchantment level to provide the final damage, if useGlobalDamage is true." +
+                            "\nDefault: 0.75")
+                    .defineInRange("globalConstantForAddingDamageFromElementalAspects", 0.75, 0, Double.POSITIVE_INFINITY);
+            USE_GLOBAL_CONSTANT_FOR_ADDING_AILMENT_CHANCE_FROM_ELEMENTAL_ASPECTS = BUILDER
+                    .comment("Similar to the above, but for ailment chance." +
+                            "\nDefault: false")
+                    .define("useGlobalConstantForAddingAilmentChanceFromElementalAspects", false);
+            GLOBAL_CONSTANT_FOR_ADDING_AILMENT_CHANCE_FROM_ELEMENTAL_ASPECTS = BUILDER
+                    .comment("Similar to the above, but for ailment chance (0.01 is 1% chance)." +
+                            "\nDefault: 0.05")
+                    .defineInRange("globalConstantForAddingAilmentChanceFromElementalAspects", 0.05, 0, 1);
+
+            //BUILDER.comment("These next settings are used for attributizing enchantments in Minecraft 1.20");
+            FIRE_ATTACK_DAMAGE_PER_FIRE_ASPECT_LEVEL = BUILDER
+                    .defineInRange("fireDamagePerFireAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+            ENABLE_IGNITE_CHANCE_ON_FIRE_ASPECT = BUILDER
+                    .define("enableIgniteChanceOnFireAspect", true);
+            IGNITE_CHANCE_PER_FIRE_ASPECT_LEVEL = BUILDER
+                    .defineInRange("igniteChancePerFireAspectLevel", 0.08, 0, 1);
+
+            ICE_ATTACK_DAMAGE_PER_ICE_ASPECT_LEVEL = BUILDER
+                    .defineInRange("iceDamagePerIceAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+            ENABLE_FREEZE_CHANCE_ON_ICE_ASPECT = BUILDER
+                    .define("enableFreezeChanceOnIceAspect", true);
+            FREEZE_CHANCE_PER_ICE_ASPECT_LEVEL = BUILDER
+                    .defineInRange("freezeChancePerIceAspectLevel", 0.08, 0, 1);
+
+            LIGHTNING_ATTACK_DAMAGE_PER_LIGHTNING_ASPECT_LEVEL = BUILDER
+                    .defineInRange("lightningDamagePerIceAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+            ENABLE_SHOCK_CHANCE_ON_LIGHTNING_ASPECT = BUILDER
+                    .define("enableShockChanceOnLightningAspect", true);
+            SHOCK_CHANCE_PER_LIGHTNING_ASPECT_LEVEL = BUILDER
+                    .defineInRange("shockChancePerLightningAspectLevel", 0.08, 0, 1);
+
+            HOLY_ATTACK_DAMAGE_PER_HOLY_ASPECT_LEVEL = BUILDER
+                    .defineInRange("holyAttackDamagePerHolyAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+            ENDER_ATTACK_DAMAGE_PER_ENDER_ASPECT_LEVEL = BUILDER
+                    .defineInRange("enderAttackDamagePerEnderAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+            BLOOD_ATTACK_DAMAGE_PER_BLOOD_ASPECT_LEVEL = BUILDER
+                    .defineInRange("bloodAttackDamagePerBloodAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+            NATURE_ATTACK_DAMAGE_PER_NATURE_ASPECT_LEVEL = BUILDER
+                    .defineInRange("natureAttackDamagePerNatureAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+            EVOCATION_ATTACK_DAMAGE_PER_EVOCATION_ASPECT_LEVEL = BUILDER
+                    .defineInRange("evocationAttackDamagePerEvocationAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+            ELDRITCH_ATTACK_DAMAGE_PER_ELDRITCH_ASPECT_LEVEL = BUILDER
+                    .defineInRange("eldritchAttackDamagePerEldritchAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+            SOUND_ATTACK_DAMAGE_PER_SOUND_ASPECT_LEVEL = BUILDER
+                    .defineInRange("soundAttackDamagePerSoundAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+            GEO_ATTACK_DAMAGE_PER_GEO_ASPECT_LEVEL = BUILDER
+                    .defineInRange("geoAttackDamagePerGeoAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+            AQUA_ATTACK_DAMAGE_PER_AQUA_ASPECT_LEVEL = BUILDER
+                    .defineInRange("aquaAttackDamagePerAquaAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+            TECHNOMANCY_ATTACK_DAMAGE_PER_TECHNOMANCY_ASPECT_LEVEL = BUILDER
+                    .defineInRange("technomancyAttackDamagePerTechnomancyAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+            ABYSSAL_ATTACK_DAMAGE_PER_ABYSSAL_ASPECT_LEVEL = BUILDER
+                    .defineInRange("abyssalAttackDamagePerAbyssalAspectLevel", 0.75, 0, Double.POSITIVE_INFINITY);
+
+        BUILDER.pop();
     }
 
     private static boolean validateIsString(Object object) {
@@ -141,6 +242,34 @@ public class Config {
     public static double modCompatCritChanceOffset, modCompatCritDamageOffset;
     public static List<String> type1schools, type2schools, type3schools, type4schools, type5schools;
     public static boolean enableDebugMode, roundFinalDamage;
+
+    public static boolean useGlobalConstantForAddingDamageFromElementalAspects, useGlobalConstantForAddingAilmentChanceFromElementalAspects;
+    public static double globalConstantForAddingDamageFromElementalAspects, globalConstantForAddingAilmentChanceFromElementalAspects;
+
+    public static double fireAttackDamagePerFireAspectLevel;
+    public static boolean enableIgniteChanceOnFireAspect;
+    public static double igniteChancePerFireAspectLevel;
+
+    public static double iceAttackDamagePerIceAspectLevel;
+    public static boolean enableFreezeChanceOnIceAspect;
+    public static double freezeChancePerIceAspectLevel;
+
+    public static double lightningAttackDamagePerLightningAspectLevel;
+    public static boolean enableShockChanceOnLightningAspect;
+    public static double shockChancePerLightningAspectLevel;
+
+    public static double holyAttackDamagePerHolyAspectLevel;
+    public static double enderAttackDamagePerEnderAspectLevel;
+    public static double bloodAttackDamagePerBloodAspectLevel;
+    public static double natureAttackDamagePerNatureAspectLevel;
+    public static double evocationAttackDamagePerEvocationAspectLevel;
+    public static double eldritchAttackDamagePerEldritchAspectLevel;
+    public static double soundAttackDamagePerSoundAspectLevel;
+    public static double geoAttackDamagePerGeoAspectLevel;
+    public static double aquaAttackDamagePerAquaAspectLevel;
+    public static double technomancyAttackDamagePerTechnomancyAspectLevel;
+    public static double abyssalAttackDamagePerAbyssalAspectLevel;
+
 
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event)
@@ -165,5 +294,44 @@ public class Config {
         type4schools = new ArrayList<>(TYPE_4_SCHOOLS.get());
         type5schools = new ArrayList<>(TYPE_5_SCHOOLS.get());
         roundFinalDamage = ROUND_FINAL_DAMAGE.get();
+
+        useGlobalConstantForAddingDamageFromElementalAspects = USE_GLOBAL_CONSTANT_FOR_ADDING_DAMAGE_FROM_ELEMENTAL_ASPECTS.get();
+        globalConstantForAddingDamageFromElementalAspects = GLOBAL_CONSTANT_FOR_ADDING_DAMAGE_FROM_ELEMENTAL_ASPECTS.get();
+        useGlobalConstantForAddingAilmentChanceFromElementalAspects = USE_GLOBAL_CONSTANT_FOR_ADDING_AILMENT_CHANCE_FROM_ELEMENTAL_ASPECTS.get();
+        globalConstantForAddingAilmentChanceFromElementalAspects = GLOBAL_CONSTANT_FOR_ADDING_AILMENT_CHANCE_FROM_ELEMENTAL_ASPECTS.get();
+
+        fireAttackDamagePerFireAspectLevel = FIRE_ATTACK_DAMAGE_PER_FIRE_ASPECT_LEVEL.get();
+        enableIgniteChanceOnFireAspect = ENABLE_IGNITE_CHANCE_ON_FIRE_ASPECT.get();
+        igniteChancePerFireAspectLevel = IGNITE_CHANCE_PER_FIRE_ASPECT_LEVEL.get();
+
+        iceAttackDamagePerIceAspectLevel = ICE_ATTACK_DAMAGE_PER_ICE_ASPECT_LEVEL.get();
+        enableFreezeChanceOnIceAspect = ENABLE_FREEZE_CHANCE_ON_ICE_ASPECT.get();
+        freezeChancePerIceAspectLevel = FREEZE_CHANCE_PER_ICE_ASPECT_LEVEL.get();
+
+        lightningAttackDamagePerLightningAspectLevel = LIGHTNING_ATTACK_DAMAGE_PER_LIGHTNING_ASPECT_LEVEL.get();
+        enableShockChanceOnLightningAspect = ENABLE_SHOCK_CHANCE_ON_LIGHTNING_ASPECT.get();
+        shockChancePerLightningAspectLevel = SHOCK_CHANCE_PER_LIGHTNING_ASPECT_LEVEL.get();
+
+        holyAttackDamagePerHolyAspectLevel = HOLY_ATTACK_DAMAGE_PER_HOLY_ASPECT_LEVEL.get();
+
+        enderAttackDamagePerEnderAspectLevel = ENDER_ATTACK_DAMAGE_PER_ENDER_ASPECT_LEVEL.get();
+
+        bloodAttackDamagePerBloodAspectLevel = BLOOD_ATTACK_DAMAGE_PER_BLOOD_ASPECT_LEVEL.get();
+
+        natureAttackDamagePerNatureAspectLevel = NATURE_ATTACK_DAMAGE_PER_NATURE_ASPECT_LEVEL.get();
+
+        evocationAttackDamagePerEvocationAspectLevel = EVOCATION_ATTACK_DAMAGE_PER_EVOCATION_ASPECT_LEVEL.get();
+
+        eldritchAttackDamagePerEldritchAspectLevel = ELDRITCH_ATTACK_DAMAGE_PER_ELDRITCH_ASPECT_LEVEL.get();
+
+        soundAttackDamagePerSoundAspectLevel = SOUND_ATTACK_DAMAGE_PER_SOUND_ASPECT_LEVEL.get();
+
+        geoAttackDamagePerGeoAspectLevel = GEO_ATTACK_DAMAGE_PER_GEO_ASPECT_LEVEL.get();
+
+        aquaAttackDamagePerAquaAspectLevel = AQUA_ATTACK_DAMAGE_PER_AQUA_ASPECT_LEVEL.get();
+
+        technomancyAttackDamagePerTechnomancyAspectLevel = TECHNOMANCY_ATTACK_DAMAGE_PER_TECHNOMANCY_ASPECT_LEVEL.get();
+
+        abyssalAttackDamagePerAbyssalAspectLevel = ABYSSAL_ATTACK_DAMAGE_PER_ABYSSAL_ASPECT_LEVEL.get();
     }
 }

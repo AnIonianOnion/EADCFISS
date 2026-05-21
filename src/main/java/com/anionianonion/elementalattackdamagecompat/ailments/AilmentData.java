@@ -2,105 +2,106 @@ package com.anionianonion.elementalattackdamagecompat.ailments;
 
 import net.minecraft.world.entity.LivingEntity;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
+
+import static com.anionianonion.elementalattackdamagecompat.util.ModUtils.normalize;
 
 public class AilmentData implements IAilmentData {
 
-    private final Map<String, AilmentInstance> ailments =
-            new HashMap<>();
+    private final Map<String, AilmentInstance> ailmentsOnEntity = new HashMap<>();
 
     @Override
-    public void addAilment(String ailment, AilmentEffect effect, float sourceDamage, int duration, LivingEntity defender, IAilmentModifiers attackerMods) {
-        String key = normalize(ailment);
+    public void addAilment(String ailmentKey, AilmentInstance newInst,
+                           LivingEntity defender) {
 
-        int extraStacks = attackerMods.getExtraStacks(key);
-        boolean stackingEnabled = extraStacks > 0;
+        ailmentKey = normalize(ailmentKey);
+        AilmentEffect effect = newInst.effect;
+        AilmentStackingMode mode = effect.getStackingMode();
 
-        // Create new instance
-        AilmentInstance newInst = new AilmentInstance(effect, sourceDamage, duration);
-
-        // If no existing ailment → apply immediately
-        if (!ailments.containsKey(key)) {
-            ailments.put(key, newInst);
-            effect.onApply(defender, newInst);
-
-            // Apply extra stacks
-            for (int i = 0; i < extraStacks; i++) {
-                AilmentInstance extra = new AilmentInstance(effect, sourceDamage, duration);
-                ailments.put(key + "_stack_" + i, extra);
-                effect.onApply(defender, extra);
+        // FIRST APPLICATION
+        if (!ailmentsOnEntity.containsKey(ailmentKey)) {
+            // Ignite and other non-stacking ailments should NOT add a stack here
+            if (effect.getStackingMode() == AilmentStackingMode.ADDITIVE_STACKING) {
+                Object payload = effect.createStackPayload(defender, newInst);
+                newInst.addStack(newInst.totalDamage, newInst.totalEffectStrength, newInst.getDuration(), payload);
             }
 
+            ailmentsOnEntity.put(ailmentKey, newInst);
+            effect.onApply(defender, newInst);
             return;
         }
 
-        // Existing ailment
-        AilmentInstance old = ailments.get(key);
+        AilmentInstance old = ailmentsOnEntity.get(ailmentKey);
 
-        // STACKING MODE
-        if (stackingEnabled) {
-            // Add new stack without removing old
-            String stackKey = key + "_stack_" + System.nanoTime();
-            ailments.put(stackKey, newInst);
-            effect.onApply(defender, newInst);
+        switch (mode) {
 
-            // Apply extra stacks
-            for (int i = 0; i < extraStacks; i++) {
-                AilmentInstance extra = new AilmentInstance(effect, sourceDamage, duration);
-                ailments.put(stackKey + "_extra_" + i, extra);
-                effect.onApply(defender, extra);
+            case STRONGEST_WINS -> {
+                if (newInst.totalDamage > old.totalDamage) {
+                    old.onExpire(defender, old);
+                    ailmentsOnEntity.put(ailmentKey, newInst);
+                    effect.onApply(defender, newInst);
+                } else if (newInst.totalDamage == old.totalDamage) {
+                    old.refresh(newInst.getDuration());
+                }
             }
 
-            return;
-        }
+            case STRONGEST_INTENSITY -> {
+                if (newInst.strongestEffectStrength > old.strongestEffectStrength) {
+                    old.onExpire(defender, old);
+                    ailmentsOnEntity.put(ailmentKey, newInst);
+                    effect.onApply(defender, newInst);
+                }
+            }
 
-        // STRONGEST-WINS MODE
-        if (sourceDamage > old.sourceDamage) {
-            old.onExpire(defender, old);
-            ailments.put(key, newInst);
-            effect.onApply(defender, newInst);
-            return;
-        }
+            case STRONGEST_DURATION -> {
+                if (newInst.getDuration() > old.getDuration()) {
+                    old.onExpire(defender, old);
+                    ailmentsOnEntity.put(ailmentKey, newInst);
+                    effect.onApply(defender, newInst);
+                }
+            }
 
-        // REFRESH DURATION MODE
-        if (sourceDamage == old.sourceDamage) {
-            old.refresh(duration);
-        }
+            case ADDITIVE_STACKING -> {
+                Object payload = effect.createStackPayload(defender, newInst);
 
-        // weaker application does nothing
+                old.addStack(
+                        newInst.totalDamage,
+                        newInst.totalEffectStrength,
+                        newInst.getDuration(),
+                        payload
+                );
+
+                effect.onApply(defender, old);
+                old.refresh(newInst.getDuration());
+            }
+
+            case NO_STACKING_REFRESH_DURATION -> {
+                old.refresh(newInst.getDuration());
+            }
+        }
     }
 
-
-
-
     @Override
-    public Map<String, AilmentInstance> getAilments() {
-        return ailments;
+    public Map<String, AilmentInstance> getAilmentsOnEntity() {
+        return ailmentsOnEntity;
     }
 
     @Override
     public void tick(LivingEntity entity) {
-        Iterator<Map.Entry<String, AilmentInstance>> it = ailments.entrySet().iterator();
+
+        Iterator<Map.Entry<String, AilmentInstance>> it = ailmentsOnEntity.entrySet().iterator();
 
         while (it.hasNext()) {
             var entry = it.next();
             var inst = entry.getValue();
 
-            // Apply effect
+            inst.tickStacks(entity, inst.effect);
             inst.tickEffect(entity, inst);
 
-            // Decrement duration
             if (inst.tickDown()) {
                 inst.onExpire(entity, inst);
-                it.remove(); // REQUIRED
+                it.remove();
             }
         }
-    }
-
-    private String normalize(String key) {
-        return key.toLowerCase(Locale.ROOT).trim();
     }
 }
