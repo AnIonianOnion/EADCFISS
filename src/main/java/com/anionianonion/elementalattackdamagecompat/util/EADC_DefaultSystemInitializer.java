@@ -126,7 +126,7 @@ public class EADC_DefaultSystemInitializer {
                         .setIfDiscardIfBelowMinimumEffectStrength(true)
                         .setEffectStrengthCoefficient(1f)
                         .setMinEffectStrengthToKeep(0.05f)
-                        .setBaseDurationInSeconds(4)
+                        .setBaseDurationInSeconds(40)
                         .stackingMode(AilmentStackingMode.ADDITIVE_STACKING)
                         .setMaxStacks(50)
                         .createStackPayload((defender, instance) -> {

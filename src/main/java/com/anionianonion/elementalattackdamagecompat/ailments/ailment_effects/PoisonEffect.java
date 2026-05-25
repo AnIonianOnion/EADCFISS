@@ -34,7 +34,7 @@ public class PoisonEffect extends DamagingAilmentEffect {
     }
 
     @Override
-    public int getMaxStacks() {
+    public int getDefaultMaxStacks() {
         return Integer.MAX_VALUE;
     }
 

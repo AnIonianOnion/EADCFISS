@@ -12,9 +12,6 @@ public interface AilmentEffect {
         //default: do nothing
     }
 
-    /**
-     Extra util method called to apply extra functions to the defender, when applying an ailment instance. An example use case would be changing the defender's attributes, based on the effect strength from the instance.
-     */
     default void onApply(LivingEntity defender, AilmentInstance instance) {
         //default: do nothing
     }
@@ -30,6 +27,9 @@ public interface AilmentEffect {
         // default: do nothing
     }
 
+    /**
+     Extra util method called to apply extra functions to the defender per ailment stack, when applying an ailment instance. An example use case would be changing the defender's attributes, based on the effect strength from the instance, and returning the attribute modifier's UUID to be removed later.
+     */
     default Object createStackPayload(LivingEntity defender, AilmentInstance instance) {
         return null; // default: no payload
     }
@@ -38,7 +38,7 @@ public interface AilmentEffect {
 
     AilmentStackingMode getStackingMode();
 
-    default int getMaxStacks() {
+    default int getDefaultMaxStacks() {
         return 1;
     }
 

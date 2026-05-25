@@ -19,6 +19,10 @@ public class AilmentApplier {
         String finalAilmentKey = normalize(ailmentKey);
         AilmentEffect effect = AilmentEffectRegistry.getEffect(finalAilmentKey);
 
+        int baseMaxStacks = effect.getDefaultMaxStacks();
+        int extraMaxStacks = AilmentModifierHelper.get(livingAttackerOrCaster).getExtraMaxStacks(ailmentKey);
+        int finalMaxStacks = baseMaxStacks + extraMaxStacks;
+
         if(effect instanceof NonDamagingAilmentEffect ndae) {
 
             float effectStrength = ndae.isUsingVaryingEffectStrength() ?
@@ -29,6 +33,7 @@ public class AilmentApplier {
                     (int) (ndae.computeVariableEffectDuration(damage, livingDefender, livingAttackerOrCaster) * 20) :
                     getDurationInTicks(ndae, livingAttackerOrCaster);
 
+
             AilmentDataHelper.getOptional(livingDefender).ifPresent(cap -> {
                 AilmentInstance instance = new AilmentInstance(ndae, damage, effectStrength, effectDurationInTicks);
                 if(livingDefender instanceof Mob mob) {
@@ -38,6 +43,7 @@ public class AilmentApplier {
                     ElementalAttackDamageCompatMod.LOGGER.info("Ailment: " + ailmentKey);
                     ElementalAttackDamageCompatMod.LOGGER.info("effect strength: " + effectStrength);
                 }
+                instance.setMaxStacks(finalMaxStacks);
 
                 cap.addAilment(finalAilmentKey, instance, livingDefender);
             });
@@ -47,6 +53,7 @@ public class AilmentApplier {
 
             AilmentDataHelper.getOptional(livingDefender).ifPresent(cap -> {
                 AilmentInstance instance = new AilmentInstance(effect, damage, 0, duration);
+                instance.setMaxStacks(finalMaxStacks);
                 cap.addAilment(finalAilmentKey, instance, livingDefender);
             });
         }

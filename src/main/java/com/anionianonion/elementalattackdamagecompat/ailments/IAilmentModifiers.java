@@ -7,6 +7,8 @@ public interface IAilmentModifiers {
     // +1 to maximum Ignite stacks, +2 to Poison stacks, etc.
     int getExtraStacks(String ailment);
 
+    int getExtraMaxStacks(String ailment);
+
     // Replace default ailments (Ignite → Shock, Chill → Brittle, etc.)
     String getReplacement(String originalAilment);
 
@@ -14,6 +16,8 @@ public interface IAilmentModifiers {
     List<String> getAlternateAilments(String element);
 
     void setExtraStacks(String ailment, int stacks);
+
+    void setExtraMaxStacks(String ailment, int stacks);
 
     void setReplacement(String originalAilment, String replacement);
 
@@ -23,6 +27,10 @@ public interface IAilmentModifiers {
         @Override
         public int getExtraStacks(String ailment) { return 0; }
 
+        public int getExtraMaxStacks(String ailment) {
+            return 0;
+        }
+
         @Override
         public String getReplacement(String originalAilment) { return null; }
 
@@ -31,6 +39,11 @@ public interface IAilmentModifiers {
 
         @Override
         public void setExtraStacks(String ailment, int stacks) {
+
+        }
+
+        @Override
+        public void setExtraMaxStacks(String ailment, int stacks) {
 
         }
 

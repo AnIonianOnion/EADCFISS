@@ -101,7 +101,7 @@ public class DamagingAilmentEffectBuilder {
             }
 
             @Override
-            public int getMaxStacks() {
+            public int getDefaultMaxStacks() {
                 return maxStacks;
             }
         };

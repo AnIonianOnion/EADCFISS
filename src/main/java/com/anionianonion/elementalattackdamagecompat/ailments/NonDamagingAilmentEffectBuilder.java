@@ -181,7 +181,7 @@ public class NonDamagingAilmentEffectBuilder {
                 }
 
                 @Override
-                public int getMaxStacks() {
+                public int getDefaultMaxStacks() {
                     return maxStacks;
                 }
 

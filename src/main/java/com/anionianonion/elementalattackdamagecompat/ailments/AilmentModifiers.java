@@ -18,6 +18,8 @@ public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<Com
     // Extra stacks per ailment (e.g. +1 Ignite stack)
     private final Map<String, Integer> extraStacks = new HashMap<>();
 
+    private final Map<String, Integer> extraMaxStacks = new HashMap<>();
+
     // Replacements: original → replacement (e.g. IGNITE → SHOCK)
     private final Map<String, String> replacements = new HashMap<>();
 
@@ -27,6 +29,11 @@ public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<Com
     @Override
     public int getExtraStacks(String ailment) {
         return extraStacks.getOrDefault(normalize(ailment), 0);
+    }
+
+    @Override
+    public int getExtraMaxStacks(String ailment) {
+        return extraMaxStacks.getOrDefault(normalize(ailment), 0);
     }
 
     @Override
@@ -47,6 +54,15 @@ public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<Com
             extraStacks.remove(normalize(ailment));
         } else {
             extraStacks.put(normalize(ailment), stacks);
+        }
+    }
+
+    @Override
+    public void setExtraMaxStacks(String ailment, int stacks) {
+        if(stacks <= 0) {
+            extraMaxStacks.remove(normalize(ailment));
+        } else {
+          extraMaxStacks.put(normalize(ailment), stacks);
         }
     }
 

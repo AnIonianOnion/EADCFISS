@@ -3,7 +3,6 @@ package com.anionianonion.elementalattackdamagecompat.ailments.ailment_effects;
 import com.anionianonion.elementalattackdamagecompat.util.AttributeHelpers;
 import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompatMod;
 import com.anionianonion.elementalattackdamagecompat.ModAttributes;
-import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentStackingMode;
 import com.anionianonion.elementalattackdamagecompat.ailments.NonDamagingAilmentEffect;
 import net.minecraft.util.Mth;
@@ -36,6 +35,11 @@ public class ShockEffect extends NonDamagingAilmentEffect {
     @Override
     public float getBasicEffectStrength() {
         return 0;
+    }
+
+    @Override
+    public int getDefaultMaxStacks() {
+        return super.getDefaultMaxStacks();
     }
 
     @Override

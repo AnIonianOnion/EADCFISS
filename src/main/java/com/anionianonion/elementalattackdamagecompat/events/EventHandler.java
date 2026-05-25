@@ -178,10 +178,12 @@ public class EventHandler {
             if(helmet.getItem() instanceof ScorchHelmetItem) {
                 if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.info("scorch has replaced ignite");
                 ailmentModifiers.setReplacement("ignite", "scorch");
+                //ailmentModifiers.setExtraStacks("scorch", 1);
             }
             else {
                 if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.info("Ignite has went back to normal");
                 ailmentModifiers.setReplacement("ignite", null);
+                ailmentModifiers.setExtraStacks("scorch", 0);
             }
 
             ItemStack mainHandItem = livingDamager.getItemInHand(InteractionHand.MAIN_HAND);

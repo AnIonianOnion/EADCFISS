@@ -23,7 +23,7 @@ public class AilmentData implements IAilmentData {
             // Ignite and other non-stacking ailments should NOT add a stack here
             if (effect.getStackingMode() == AilmentStackingMode.ADDITIVE_STACKING) {
                 Object payload = effect.createStackPayload(defender, newInst);
-                newInst.addStack(newInst.totalDamage, newInst.totalEffectStrength, newInst.getDuration(), payload);
+                newInst.addStack(defender, newInst.totalDamage, newInst.totalEffectStrength, newInst.getDuration(), AilmentInstance.StackEntry.ReplacementMode.OLDEST, payload);
             }
 
             ailmentsOnEntity.put(ailmentKey, newInst);
@@ -31,7 +31,9 @@ public class AilmentData implements IAilmentData {
             return;
         }
 
+        //old instance is never null
         AilmentInstance old = ailmentsOnEntity.get(ailmentKey);
+        old.setMaxStacks(newInst.maxStacks);
 
         switch (mode) {
 
@@ -46,11 +48,29 @@ public class AilmentData implements IAilmentData {
             }
 
             case STRONGEST_INTENSITY -> {
-                if (newInst.strongestEffectStrength > old.strongestEffectStrength) {
-                    old.onExpire(defender, old);
-                    ailmentsOnEntity.put(ailmentKey, newInst);
-                    effect.onApply(defender, newInst);
+                if(old.maxStacks <= 1) {
+                    if (newInst.strongestEffectStrength > old.strongestEffectStrength) {
+                        old.onExpire(defender, old);
+                        ailmentsOnEntity.put(ailmentKey, newInst);
+                        effect.onApply(defender, newInst);
+                    }
+                    return;
                 }
+                // If more than 1 stack allowed → behave like additive stacking
+                Object payload = effect.createStackPayload(defender, newInst);
+
+                old.addStack(
+                        defender,
+                        newInst.totalDamage,
+                        newInst.totalEffectStrength,
+                        newInst.getDuration(),
+                        AilmentInstance.StackEntry.ReplacementMode.WEAKEST,
+                        payload
+                );
+
+                effect.onApply(defender, old);
+                old.refresh(newInst.getDuration());
+
             }
 
             case STRONGEST_DURATION -> {
@@ -65,9 +85,11 @@ public class AilmentData implements IAilmentData {
                 Object payload = effect.createStackPayload(defender, newInst);
 
                 old.addStack(
+                        defender,
                         newInst.totalDamage,
                         newInst.totalEffectStrength,
                         newInst.getDuration(),
+                        AilmentInstance.StackEntry.ReplacementMode.OLDEST,
                         payload
                 );
 

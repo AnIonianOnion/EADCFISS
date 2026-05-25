@@ -59,6 +59,10 @@ public class AttributeHelpers {
             });
         }
 
+        if(livingDefender.hasEffect(MobEffects.FIRE_RESISTANCE)) {
+            result.put("fire", 0f);
+        }
+
         return result;
     }
 
@@ -281,15 +285,17 @@ public class AttributeHelpers {
         float hardflooredResist = -2f;
 
         //todo: fix scorch, and test brittle
-        AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, "scorch");
-        float scorch = instance != null ? instance.strongestEffectStrength : 0f;
+        AilmentInstance scorch = AilmentDataHelper.getAilment(livingDefender, "scorch");
+        float scorchEffectValue = scorch != null ? scorch.strongestEffectStrength : 0f;
 
         if(Config.enableDebugMode) {
-            boolean isNull = instance == null;
+            boolean isNull = scorch == null;
             ElementalAttackDamageCompatMod.LOGGER.info("instance == null? " + (isNull));
             if(!isNull) {
-                ElementalAttackDamageCompatMod.LOGGER.info("scorch: " + scorch);
-                ElementalAttackDamageCompatMod.LOGGER.info("strongestEffectStrength: " + instance.strongestEffectStrength);
+                //always 0 because Scorch uses Strongest Effect
+                //ElementalAttackDamageCompatMod.LOGGER.info("Scorch stacks: " + scorch.stacks.size());
+                ElementalAttackDamageCompatMod.LOGGER.info("scorch: " + scorchEffectValue);
+                ElementalAttackDamageCompatMod.LOGGER.info("strongestEffectStrength: " + scorch.strongestEffectStrength);
             }
         }
 
@@ -309,7 +315,7 @@ public class AttributeHelpers {
 
                 float clampedElementalResistance = Math.max(cappedResistance, hardflooredResist); //because we set the softcap/hardcap (aka. max) and the hardfloor (aka. min), and only want the resist to be between these values
 
-                clampedElementalResistance -= scorch;
+                clampedElementalResistance -= scorchEffectValue;
 
                 //verified formula
                 //let's say you deal 100 fire damage, and the enemy has 25% fire resist.

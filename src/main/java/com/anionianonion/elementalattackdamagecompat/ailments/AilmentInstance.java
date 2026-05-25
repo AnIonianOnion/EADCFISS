@@ -37,6 +37,8 @@ public class AilmentInstance {
             this.durationTicks = dur;
             this.payload = payload;
         }
+
+        public enum ReplacementMode {OLDEST, WEAKEST }
     }
 
 
@@ -52,7 +54,7 @@ public class AilmentInstance {
         this.totalEffectStrength = strength;
         this.strongestEffectStrength = strength;
         this.durationTicks = durationTicks;
-        this.maxStacks = effect.getMaxStacks();
+        this.maxStacks = effect.getDefaultMaxStacks();
         if(effect instanceof DamagingAilmentEffect damagingAilmentEffect) {
             this.frequency = damagingAilmentEffect.getFrequencyInTicks();
         }
@@ -98,13 +100,33 @@ public class AilmentInstance {
                 .orElse(strongestEffectStrength);
     }
 
-    public void addStack(float dmg, float strength, int duration, Object payload) {
+    public void addStack(LivingEntity defender, float dmg, float strength, int duration, StackEntry.ReplacementMode replacementMode, Object payload) {
 
         //removing the oldest stack if we are at max stacks...
         if (stacks.size() >= maxStacks) {
-            StackEntry oldest = stacks.removeFirst();
-            totalDamage -= oldest.damage;
-            totalEffectStrength -= oldest.effectStrength;
+            if(replacementMode == StackEntry.ReplacementMode.OLDEST) {
+                StackEntry oldest = stacks.removeFirst();
+                totalDamage -= oldest.damage;
+                totalEffectStrength -= oldest.effectStrength;    
+            } else if (replacementMode == StackEntry.ReplacementMode.WEAKEST) {
+                // 1. Find the weakest stack
+                StackEntry weakest = stacks.stream()
+                        .min(Comparator.comparing(s -> s.effectStrength))
+                        .orElse(null);
+
+                if (weakest != null) {
+                    // 2. Fire onStackExpire
+                    effect.onStackExpire(defender, this, weakest, weakest.payload);
+
+                    // 3. Remove it
+                    stacks.remove(weakest);
+
+                    // 4. Update totals
+                    totalDamage -= weakest.damage;
+                    totalEffectStrength -= weakest.effectStrength;
+                }
+            }
+
         }
 
         //before we add a new one
@@ -117,6 +139,9 @@ public class AilmentInstance {
             strongestEffectStrength = strength;
     }
 
+    public void setMaxStacks(int newMaxStacks) {
+        this.maxStacks = newMaxStacks;
+    }
     public void tickEffect(LivingEntity entity, AilmentInstance instance) {
         this.effect.tick(entity, instance);
     }
