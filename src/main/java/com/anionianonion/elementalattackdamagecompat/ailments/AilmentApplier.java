@@ -3,8 +3,10 @@ package com.anionianonion.elementalattackdamagecompat.ailments;
 import com.anionianonion.elementalattackdamagecompat.Config;
 import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompatMod;
 import com.anionianonion.elementalattackdamagecompat.ModAttributes;
+import com.anionianonion.elementalattackdamagecompat.util.ModUtils;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,38 +25,39 @@ public class AilmentApplier {
         int extraMaxStacks = AilmentModifierHelper.get(livingAttackerOrCaster).getExtraMaxStacks(ailmentKey);
         int finalMaxStacks = baseMaxStacks + extraMaxStacks;
 
+        if(livingAttackerOrCaster instanceof Player player && Config.enableDebugMode) {
+            player.sendSystemMessage(Component.literal("extraMaxStacks: " + extraMaxStacks + ", finalMaxStacks: " + finalMaxStacks));
+        }
+
+        int effectDurationInTicks = ModUtils.getDurationInTicks(effect, damage, livingDefender, livingAttackerOrCaster);
+
         if(effect instanceof NonDamagingAilmentEffect ndae) {
 
             float effectStrength = ndae.isUsingVaryingEffectStrength() ?
                     ndae.computeVariableEffectStrength(damage, livingDefender, livingAttackerOrCaster) :
                     ndae.getBasicEffectStrength();
 
-            int effectDurationInTicks = ndae.isUsingVaryingEffectDuration() ?
-                    (int) (ndae.computeVariableEffectDuration(damage, livingDefender, livingAttackerOrCaster) * 20) :
-                    getDurationInTicks(ndae, livingAttackerOrCaster);
-
-
             AilmentDataHelper.getOptional(livingDefender).ifPresent(cap -> {
                 AilmentInstance instance = new AilmentInstance(ndae, damage, effectStrength, effectDurationInTicks);
+                /*
                 if(livingDefender instanceof Mob mob) {
                     instance.storedTarget = mob.getTarget();
                 }
+                 */
                 if(Config.enableDebugMode) {
                     ElementalAttackDamageCompatMod.LOGGER.info("Ailment: " + ailmentKey);
                     ElementalAttackDamageCompatMod.LOGGER.info("effect strength: " + effectStrength);
                 }
                 instance.setMaxStacks(finalMaxStacks);
 
-                cap.addAilment(finalAilmentKey, instance, livingDefender);
+                cap.addAilment(livingAttackerOrCaster, finalAilmentKey, instance, livingDefender);
             });
         }
         else {
-            int duration = getDurationInTicks(effect, livingAttackerOrCaster);
-
             AilmentDataHelper.getOptional(livingDefender).ifPresent(cap -> {
-                AilmentInstance instance = new AilmentInstance(effect, damage, 0, duration);
+                AilmentInstance instance = new AilmentInstance(effect, damage, 0, effectDurationInTicks);
                 instance.setMaxStacks(finalMaxStacks);
-                cap.addAilment(finalAilmentKey, instance, livingDefender);
+                cap.addAilment(livingAttackerOrCaster, finalAilmentKey, instance, livingDefender);
             });
         }
     }
@@ -76,9 +79,9 @@ public class AilmentApplier {
             // Apply each ailment
             for (String ailment : ailments) {
 
-                int stacks = 1 + mods.getExtraStacks(ailment);
+                int stacksToApply = 1 + mods.getExtraStacks(ailment);
 
-                for (int i = 0; i < stacks; i++) {
+                for (int i = 0; i < stacksToApply; i++) {
                     applySingleAilment(attacker, target, ailment, damage);
                 }
             }
@@ -129,15 +132,6 @@ public class AilmentApplier {
 
             }
         }
-    }
-
-    /**
-        Freeze duration doesn't have a constant value,
-        so this method can only be used on AilmentEffects with constant values.
-     */
-    private static int getDurationInTicks(AilmentEffect ae, LivingEntity livingAttackerOrCaster) {
-
-        return (int) (ae.getDurationInSeconds(livingAttackerOrCaster) * 20);
     }
 }
 

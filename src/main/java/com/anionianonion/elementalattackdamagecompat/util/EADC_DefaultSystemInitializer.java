@@ -86,7 +86,7 @@ public class EADC_DefaultSystemInitializer {
                 .doesVaryEffectDuration(false)
                 .setBaseDurationInSeconds(3)
                 .setEffectStrength(0.5f)
-                .stackingMode(AilmentStackingMode.ADDITIVE_STACKING)
+                .stackingMode(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY)
                 .setMaxStacks(6)
                 .createStackPayload((defender, instance) -> {
                     var attr = defender.getAttribute(Attributes.MAX_HEALTH);
@@ -127,7 +127,7 @@ public class EADC_DefaultSystemInitializer {
                         .setEffectStrengthCoefficient(1f)
                         .setMinEffectStrengthToKeep(0.05f)
                         .setBaseDurationInSeconds(40)
-                        .stackingMode(AilmentStackingMode.ADDITIVE_STACKING)
+                        .stackingMode(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY)
                         .setMaxStacks(50)
                         .createStackPayload((defender, instance) -> {
 

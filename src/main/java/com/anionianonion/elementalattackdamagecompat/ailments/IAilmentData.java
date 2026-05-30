@@ -6,7 +6,7 @@ import java.util.Map;
 
 public interface IAilmentData {
 
-    void addAilment(String ailmentKey, AilmentInstance newInst, LivingEntity defender);
+    void addAilment(LivingEntity livingAttackerOrCaster, String ailmentKey, AilmentInstance newInst, LivingEntity defender);
 
     Map<String, AilmentInstance> getAilmentsOnEntity();
 

@@ -18,7 +18,7 @@ public class PoisonEffect extends DamagingAilmentEffect {
         if(inst.isntTimeToDealDamage()) return;
         inst.resetTickCounter();
 
-        float damage = inst.totalDamage * 0.2f;
+        float damage = inst.getTotalDamage() * 0.2f;
 
         defender.hurt(ModDamageSources.poison((ServerLevel) defender.level()), damage);
     }
@@ -30,7 +30,7 @@ public class PoisonEffect extends DamagingAilmentEffect {
 
     @Override
     public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.ADDITIVE_STACKING;
+        return AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE;
     }
 
     @Override

@@ -15,7 +15,7 @@ public class DamagingAilmentEffectBuilder {
     private AilmentTickFunction onTickFunc = (defender, instance) -> {};
     private AilmentApplyFunction onApplyFunc = (defender, instance) -> {};
     private AilmentExpireFunction onExpireFunc = (defender, instance) -> {};
-    private AilmentStackingMode stackingMode = AilmentStackingMode.STRONGEST_WINS;
+    private AilmentStackingMode stackingMode = AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE;
     private int maxStacks = 1;
 
     /**
@@ -81,12 +81,12 @@ public class DamagingAilmentEffectBuilder {
             }
 
             @Override
-            public void onApply(LivingEntity defender, AilmentInstance instance) {
+            public void onFirstApplication(LivingEntity defender, AilmentInstance instance) {
                 onApplyFunc.apply(defender, instance);
             }
 
             @Override
-            public void onExpire(LivingEntity defender, AilmentInstance instance) {
+            public void onLastExpiration(LivingEntity defender, AilmentInstance instance) {
                 onExpireFunc.expire(defender, instance);
             }
 

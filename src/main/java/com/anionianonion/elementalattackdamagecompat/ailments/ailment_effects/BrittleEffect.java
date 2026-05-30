@@ -3,7 +3,6 @@ package com.anionianonion.elementalattackdamagecompat.ailments.ailment_effects;
 import com.anionianonion.elementalattackdamagecompat.util.AttributeHelpers;
 import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompatMod;
 import com.anionianonion.elementalattackdamagecompat.ModAttributes;
-import com.anionianonion.elementalattackdamagecompat.ailments.AilmentInstance;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentStackingMode;
 import com.anionianonion.elementalattackdamagecompat.ailments.NonDamagingAilmentEffect;
 import net.minecraft.util.Mth;
@@ -20,7 +19,7 @@ public class BrittleEffect extends NonDamagingAilmentEffect {
 
     @Override
     public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STRONGEST_INTENSITY;
+        return AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY;
     }
 
     @Override

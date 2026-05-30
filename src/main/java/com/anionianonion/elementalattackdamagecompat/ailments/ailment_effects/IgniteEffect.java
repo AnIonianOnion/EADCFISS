@@ -19,7 +19,7 @@ public class IgniteEffect extends DamagingAilmentEffect {
         if(inst.isntTimeToDealDamage()) return;
         inst.resetTickCounter();
 
-        float damage = inst.totalDamage * 0.9f;
+        float damage = inst.getTotalDamage() * 0.9f;
 
         defender.hurt(ModDamageSources.ignite((ServerLevel) defender.level()), damage);
     }
@@ -31,7 +31,7 @@ public class IgniteEffect extends DamagingAilmentEffect {
 
     @Override
     public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STRONGEST_WINS;
+        return AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE;
     }
 
     @Override

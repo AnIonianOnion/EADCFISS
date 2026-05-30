@@ -22,10 +22,12 @@ public class FreezeEffect extends NonDamagingAilmentEffect {
     }
 
     @Override
-    public void onExpire(LivingEntity defender, AilmentInstance instance) {
+    public void onLastExpiration(LivingEntity defender, AilmentInstance instance) {
         if (defender instanceof Mob mob) {
             mob.setNoAi(false);
 
+            //todo: test if it breaks post-Freeze targetting on Iron Golems
+            /*
             LivingEntity oldTarget = instance.storedTarget;
             if (oldTarget != null && oldTarget.isAlive()) {
                 mob.setTarget(oldTarget);
@@ -34,6 +36,7 @@ public class FreezeEffect extends NonDamagingAilmentEffect {
             }
 
             instance.storedTarget = null;
+             */
         }
     }
 

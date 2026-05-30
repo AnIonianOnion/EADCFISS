@@ -90,6 +90,11 @@ public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<Com
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
 
+        //extra max stacks
+        CompoundTag maxStacksTag = new CompoundTag();
+        extraMaxStacks.forEach(maxStacksTag::putInt);
+        tag.put("extraMaxStacks", maxStacksTag);
+
         // extra stacks
         CompoundTag stacksTag = new CompoundTag();
         extraStacks.forEach(stacksTag::putInt);
@@ -117,9 +122,16 @@ public class AilmentModifiers implements IAilmentModifiers, INBTSerializable<Com
     @Override
     public void deserializeNBT(CompoundTag tag) {
 
+        extraMaxStacks.clear();
         extraStacks.clear();
         replacements.clear();
         alternates.clear();
+
+        //extra max stacks
+        CompoundTag maxStacksTag = tag.getCompound("extraMaxStacks");
+        for(String key : maxStacksTag.getAllKeys()) {
+            extraMaxStacks.put(String.valueOf(key), maxStacksTag.getInt(key));
+        }
 
         // extra stacks
         CompoundTag stacksTag = tag.getCompound("extraStacks");

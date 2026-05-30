@@ -12,25 +12,31 @@ public interface AilmentEffect {
         //default: do nothing
     }
 
-    default void onApply(LivingEntity defender, AilmentInstance instance) {
+    /**
+    Whenever an AilmentInstance is first added, and doesn't trigger on subsequent stacks until they all expire.
+     */
+    default void onFirstApplication(LivingEntity defender, AilmentInstance instance) {
         //default: do nothing
     }
     /**
-     Extra util method called to apply extra functions to the defender, when expiring an ailment instance. An example use case would be removing attribute modifiers from the onApply method.
+     Whenever an AilmentInstance all expires.
      */
-    default void onExpire(LivingEntity defender, AilmentInstance instance) {
+    default void onLastExpiration(LivingEntity defender, AilmentInstance instance) {
         //default: do nothing
     }
 
+    /**
+    Whenever a stack of an AilmentInstance expires.
+     */
     default void onStackExpire(LivingEntity defender, AilmentInstance inst,
                               AilmentInstance.StackEntry stack, Object payload) {
         // default: do nothing
     }
 
     /**
-     Extra util method called to apply extra functions to the defender per ailment stack, when applying an ailment instance. An example use case would be changing the defender's attributes, based on the effect strength from the instance, and returning the attribute modifier's UUID to be removed later.
+     Whenever a stack of an AilmentInstance is added. An example use case would be changing the defender's attributes, based on the effect strength from the instance, and returning the attribute modifier's UUID to be removed later.
      */
-    default Object createStackPayload(LivingEntity defender, AilmentInstance instance) {
+    default Object onStackApply(LivingEntity defender, AilmentInstance instance) {
         return null; // default: no payload
     }
 

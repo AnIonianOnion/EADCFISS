@@ -17,7 +17,7 @@ public final class EmptyAilmentEffect implements AilmentEffect {
 
     @Override
     public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STRONGEST_WINS;
+        return AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE;
     }
 
 }

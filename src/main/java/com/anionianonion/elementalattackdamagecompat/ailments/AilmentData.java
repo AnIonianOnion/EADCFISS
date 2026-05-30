@@ -10,97 +10,36 @@ public class AilmentData implements IAilmentData {
 
     private final Map<String, AilmentInstance> ailmentsOnEntity = new HashMap<>();
 
+    /**
+    Gets or creates the ailment to add a stack to.
+    */
     @Override
-    public void addAilment(String ailmentKey, AilmentInstance newInst,
+    public void addAilment(LivingEntity livingAttackerOrCaster, String ailmentKey, AilmentInstance newInst,
                            LivingEntity defender) {
 
-        ailmentKey = normalize(ailmentKey);
-        AilmentEffect effect = newInst.effect;
-        AilmentStackingMode mode = effect.getStackingMode();
+        String finalAilmentKey = normalize(ailmentKey);
+        var ailmentStackingMode = newInst.effect.getStackingMode();
 
-        // FIRST APPLICATION
-        if (!ailmentsOnEntity.containsKey(ailmentKey)) {
-            // Ignite and other non-stacking ailments should NOT add a stack here
-            if (effect.getStackingMode() == AilmentStackingMode.ADDITIVE_STACKING) {
-                Object payload = effect.createStackPayload(defender, newInst);
-                newInst.addStack(defender, newInst.totalDamage, newInst.totalEffectStrength, newInst.getDuration(), AilmentInstance.StackEntry.ReplacementMode.OLDEST, payload);
-            }
-
-            ailmentsOnEntity.put(ailmentKey, newInst);
-            effect.onApply(defender, newInst);
-            return;
+        //On First Apply
+        if(!ailmentsOnEntity.containsKey(finalAilmentKey) && AilmentEffectRegistry.getAllAilments().contains(finalAilmentKey)) {
+            ailmentsOnEntity.put(finalAilmentKey, newInst);
+            newInst.onFirstApplication(defender);
         }
 
-        //old instance is never null
-        AilmentInstance old = ailmentsOnEntity.get(ailmentKey);
-        old.setMaxStacks(newInst.maxStacks);
+        AilmentInstance exInst = ailmentsOnEntity.get(finalAilmentKey);
+        exInst.setMaxStacks(newInst.maxStacks);
 
-        switch (mode) {
+        Object payload = exInst.onStackApply(defender);
 
-            case STRONGEST_WINS -> {
-                if (newInst.totalDamage > old.totalDamage) {
-                    old.onExpire(defender, old);
-                    ailmentsOnEntity.put(ailmentKey, newInst);
-                    effect.onApply(defender, newInst);
-                } else if (newInst.totalDamage == old.totalDamage) {
-                    old.refresh(newInst.getDuration());
-                }
-            }
-
-            case STRONGEST_INTENSITY -> {
-                if(old.maxStacks <= 1) {
-                    if (newInst.strongestEffectStrength > old.strongestEffectStrength) {
-                        old.onExpire(defender, old);
-                        ailmentsOnEntity.put(ailmentKey, newInst);
-                        effect.onApply(defender, newInst);
-                    }
-                    return;
-                }
-                // If more than 1 stack allowed → behave like additive stacking
-                Object payload = effect.createStackPayload(defender, newInst);
-
-                old.addStack(
-                        defender,
-                        newInst.totalDamage,
-                        newInst.totalEffectStrength,
-                        newInst.getDuration(),
-                        AilmentInstance.StackEntry.ReplacementMode.WEAKEST,
-                        payload
-                );
-
-                effect.onApply(defender, old);
-                old.refresh(newInst.getDuration());
-
-            }
-
-            case STRONGEST_DURATION -> {
-                if (newInst.getDuration() > old.getDuration()) {
-                    old.onExpire(defender, old);
-                    ailmentsOnEntity.put(ailmentKey, newInst);
-                    effect.onApply(defender, newInst);
-                }
-            }
-
-            case ADDITIVE_STACKING -> {
-                Object payload = effect.createStackPayload(defender, newInst);
-
-                old.addStack(
-                        defender,
-                        newInst.totalDamage,
-                        newInst.totalEffectStrength,
-                        newInst.getDuration(),
-                        AilmentInstance.StackEntry.ReplacementMode.OLDEST,
-                        payload
-                );
-
-                effect.onApply(defender, old);
-                old.refresh(newInst.getDuration());
-            }
-
-            case NO_STACKING_REFRESH_DURATION -> {
-                old.refresh(newInst.getDuration());
-            }
+        AilmentInstance.StackEntry.ReplacementMode replacementMode = AilmentInstance.StackEntry.ReplacementMode.OLDEST;
+        if(ailmentStackingMode == AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE || ailmentStackingMode == AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY) {
+            replacementMode = AilmentInstance.StackEntry.ReplacementMode.WEAKEST;
         }
+
+        exInst.addStack(defender, livingAttackerOrCaster, newInst.getDamage(),
+                newInst.getEffectStrength(), newInst.getDuration(),
+                replacementMode, ailmentStackingMode, payload);
+
     }
 
     @Override
@@ -117,11 +56,11 @@ public class AilmentData implements IAilmentData {
             var entry = it.next();
             var inst = entry.getValue();
 
-            inst.tickStacks(entity, inst.effect);
-            inst.tickEffect(entity, inst);
+            inst.tickStacks(entity);
+            inst.tickEffect(entity);
 
             if (inst.tickDown()) {
-                inst.onExpire(entity, inst);
+                inst.onLastExpiration(entity);
                 it.remove();
             }
         }

@@ -21,7 +21,7 @@ public class BleedEffect extends DamagingAilmentEffect {
 
         double speed = defender.getDeltaMovement().lengthSqr();
 
-        float base = inst.totalDamage * 0.70f;
+        float base = inst.getTotalDamage() * 0.70f;
         float movingBonus = speed > 0.001 ? base * 2f : 0f;
 
         defender.hurt(ModDamageSources.bleed((ServerLevel) defender.level()), base + movingBonus);
@@ -36,7 +36,7 @@ public class BleedEffect extends DamagingAilmentEffect {
 
     @Override
     public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STRONGEST_WINS;
+        return AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE;
     }
 
     @Override

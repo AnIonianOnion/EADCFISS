@@ -19,7 +19,7 @@ public class ShockEffect extends NonDamagingAilmentEffect {
 
     @Override
     public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STRONGEST_INTENSITY;
+        return AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY;
     }
 
     @Override

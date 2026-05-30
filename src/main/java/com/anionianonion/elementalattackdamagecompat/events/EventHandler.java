@@ -37,6 +37,7 @@ import net.minecraftforge.event.ItemAttributeModifierEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -102,11 +103,14 @@ public class EventHandler {
             AilmentDataHelper.getOptional(e.getEntity()).ifPresent(cap -> {
                 cap.getAilmentsOnEntity().forEach((ailment, inst) -> {
                     ElementalAttackDamageCompatMod.LOGGER.info(
-                            "{}: effectStrength={}, totalStrength={} duration={} ticks",
+                            "{}: effectStrength={}, strongestEffectStrength={}, totalStrength={}, duration={} ticks, maxStacks={}, stacks= {}",
                             ailment,
-                            inst.strongestEffectStrength,
-                            inst.totalEffectStrength,
-                            inst.getDuration()
+                            inst.getEffectStrength(),
+                            inst.getStrongestEffectStrength(),
+                            inst.getTotalEffectStrength(),
+                            inst.getDuration(),
+                            inst.getMaxStacks(),
+                            inst.getStacks()
                     );
                 });
             });
@@ -164,13 +168,15 @@ public class EventHandler {
     }
 
     @SubscribeEvent
-    public static void onHit(LivingAttackEvent e) {
+    public static void onHit(LivingHurtEvent e) {
         DamageSource damageSource = e.getSource();
-        if(!(damageSource.getEntity() instanceof LivingEntity livingDamager)) return;
-        if(damageSource.toString().contains("(sweeping)")) return;
+        if(DamageManager.hasFailedInitialChecks(damageSource)) return;
+
+        LivingEntity livingDamager = (LivingEntity) damageSource.getEntity();
 
         if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.info("secondary damage event fired");
 
+        assert livingDamager != null;
         AilmentModifierHelper.getOptional(livingDamager).ifPresent(ailmentModifiers -> {
 
             if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.info("Ailment modifier capability fired from secondary damage event.");
@@ -178,12 +184,12 @@ public class EventHandler {
             if(helmet.getItem() instanceof ScorchHelmetItem) {
                 if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.info("scorch has replaced ignite");
                 ailmentModifiers.setReplacement("ignite", "scorch");
-                //ailmentModifiers.setExtraStacks("scorch", 1);
+                ailmentModifiers.setExtraMaxStacks("scorch", 1);
             }
             else {
                 if(Config.enableDebugMode) ElementalAttackDamageCompatMod.LOGGER.info("Ignite has went back to normal");
                 ailmentModifiers.setReplacement("ignite", null);
-                ailmentModifiers.setExtraStacks("scorch", 0);
+                ailmentModifiers.setExtraMaxStacks("scorch", 0);
             }
 
             ItemStack mainHandItem = livingDamager.getItemInHand(InteractionHand.MAIN_HAND);

@@ -233,7 +233,7 @@ public class AttributeHelpers {
         secondaryCritDamageBaseAmount = getBaseTotal(livingAttackerOrCaster, secondaryCritDamage);
 
         AilmentInstance instance = AilmentDataHelper.getAilment(livingDefender, "brittle");
-        float brittle = instance != null ? instance.strongestEffectStrength : 0f;
+        float brittle = instance != null ? instance.getTotalEffectStrength() : 0f;
 
         critChanceBaseAmount += secondaryCritChanceBaseAmount + (float) Config.modCompatCritChanceOffset + brittle;
         critDamageBaseAmount += secondaryCritDamageBaseAmount + (float) Config.modCompatCritDamageOffset;
@@ -267,8 +267,8 @@ public class AttributeHelpers {
             }
         }
 
-        float shockEffectValue = shock != null ? shock.strongestEffectStrength : 0f;
-        float ooSShockEffectValue = oosShock != null ? oosShock.totalEffectStrength : 0f;
+        float shockEffectValue = shock != null ? shock.getTotalEffectStrength() : 0f;
+        float ooSShockEffectValue = oosShock != null ? oosShock.getTotalEffectStrength() : 0f;
 
         float max = Math.max(shockEffectValue, ooSShockEffectValue);
 
@@ -286,22 +286,12 @@ public class AttributeHelpers {
 
         //todo: fix scorch, and test brittle
         AilmentInstance scorch = AilmentDataHelper.getAilment(livingDefender, "scorch");
-        float scorchEffectValue = scorch != null ? scorch.strongestEffectStrength : 0f;
-
-        if(Config.enableDebugMode) {
-            boolean isNull = scorch == null;
-            ElementalAttackDamageCompatMod.LOGGER.info("instance == null? " + (isNull));
-            if(!isNull) {
-                //always 0 because Scorch uses Strongest Effect
-                //ElementalAttackDamageCompatMod.LOGGER.info("Scorch stacks: " + scorch.stacks.size());
-                ElementalAttackDamageCompatMod.LOGGER.info("scorch: " + scorchEffectValue);
-                ElementalAttackDamageCompatMod.LOGGER.info("strongestEffectStrength: " + scorch.strongestEffectStrength);
-            }
-        }
+        float scorchEffectValue = scorch != null ? scorch.getTotalEffectStrength() : 0f;
 
         for(Map.Entry<String, Float> entry : enemyElementalResistances.entrySet()) {
             attackerData.compute(entry.getKey(), (key, value) -> {
                 Float resistance = enemyElementalResistances.get(key);
+                resistance -= scorchEffectValue;
 
                 Float softcappedElementalResist = ModAttributes.getAttributeValue(livingDefender, String.format("%s:%s_max_resistance", ElementalAttackDamageCompatMod.MOD_ID, key));
                 if(softcappedElementalResist == null) softcappedElementalResist = 0.5f;
@@ -314,8 +304,6 @@ public class AttributeHelpers {
                 float cappedResistance = Math.min(attackOrSpellResistance, hardcappedOrSoftcappedResist);
 
                 float clampedElementalResistance = Math.max(cappedResistance, hardflooredResist); //because we set the softcap/hardcap (aka. max) and the hardfloor (aka. min), and only want the resist to be between these values
-
-                clampedElementalResistance -= scorchEffectValue;
 
                 //verified formula
                 //let's say you deal 100 fire damage, and the enemy has 25% fire resist.
@@ -378,7 +366,7 @@ public class AttributeHelpers {
     }
     public static void applyLessDamageFromPossibleSapEffects(HashMap<String, Float> elementalData, LivingEntity livingAttacker) {
         AilmentInstance instance = AilmentDataHelper.getAilment(livingAttacker, "sap");
-        float sap = instance != null ? instance.strongestEffectStrength : 0f;
+        float sap = instance != null ? instance.getTotalEffectStrength() : 0f;
         float dmgMultiplier = 1 - sap;
 
         multiplyWithConstantMultiplier(elementalData, dmgMultiplier);

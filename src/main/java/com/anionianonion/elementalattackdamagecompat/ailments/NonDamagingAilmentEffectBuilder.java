@@ -26,7 +26,7 @@ public class NonDamagingAilmentEffectBuilder {
     private AilmentExpireFunction onExpireFunc = (defender, instance) -> {};
     private StackPayloadFunction createStackPayloadFunc = (defender, instance) -> null;
     private StackExpireFunction onStackExpireFunc = (defender, instance, stack, payload) -> {};
-    private AilmentStackingMode stackingMode = AilmentStackingMode.STRONGEST_WINS;
+    private AilmentStackingMode stackingMode = AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE;
     private int maxStacks = 1;
 
     //----------Basic---------
@@ -151,12 +151,12 @@ public class NonDamagingAilmentEffectBuilder {
                 }
 
                 @Override
-                public void onApply(LivingEntity defender, AilmentInstance instance) {
+                public void onFirstApplication(LivingEntity defender, AilmentInstance instance) {
                     onApplyFunc.apply(defender, instance);
                 }
 
                 @Override
-                public void onExpire(LivingEntity defender, AilmentInstance instance) {
+                public void onLastExpiration(LivingEntity defender, AilmentInstance instance) {
                     onExpireFunc.expire(defender, instance);
                 }
 
@@ -166,7 +166,7 @@ public class NonDamagingAilmentEffectBuilder {
                 }
 
                 @Override
-                public Object createStackPayload(LivingEntity defender, AilmentInstance instance) {
+                public Object onStackApply(LivingEntity defender, AilmentInstance instance) {
                     return createStackPayloadFunc.createPayload(defender, instance);
                 }
 
