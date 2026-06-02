@@ -7,6 +7,9 @@ import com.anionianonion.elementalattackdamagecompat.ailments.NonDamagingAilment
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class FreezeEffect extends NonDamagingAilmentEffect {
 
     @Override
@@ -47,10 +50,9 @@ public class FreezeEffect extends NonDamagingAilmentEffect {
     }
 
     @Override
-    public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STRONGEST_DURATION;
+    public List<AilmentStackingMode> getStackingModes() {
+        return new ArrayList<>(List.of(AilmentStackingMode.STRONGEST_DURATION));
     }
-
     @Override
     protected boolean usesVaryingEffectDuration() {
         return true;

@@ -130,7 +130,7 @@ public class AilmentInstance {
             stackEntry.durationTicks--;
             if(stackEntry.durationTicks <= 0) {
 
-                this.effect.onStackExpire(defender, this, stackEntry, stackEntry.payload);
+                onStackExpire(defender, stackEntry);
 
                 this.totalDamage -= stackEntry.damage;
                 this.totalEffectStrength -= stackEntry.effectStrength;
@@ -142,26 +142,26 @@ public class AilmentInstance {
         this.strongestEffectStrength = this.stacks.stream()
                 .map(stack -> stack.effectStrength)
                 .max(Float::compare)
-                .orElse(this.strongestEffectStrength);
+                .orElse(0f);
 
         this.strongestDamage = this.stacks.stream()
                 .map(stack -> stack.damage)
                 .max(Float::compare)
-                .orElse(this.strongestDamage);
+                .orElse(0f);
     }
-    public void addStack(LivingEntity defender, LivingEntity livingAttacker, float dmg, float strength, int duration, StackEntry.ReplacementMode replacementMode, AilmentStackingMode ailmentStackingMode, Object payload) {
+    public void addStack(LivingEntity defender, LivingEntity livingAttacker, float dmg, float strength, int duration, StackEntry.ReplacementMode replacementMode, List<AilmentStackingMode> ailmentStackingModes, Object payload) {
 
         //first we handle removing stacks if the amount of stacks is above the max before adding the new stack
         while(this.stacks.size() >= this.maxStacks) {
-            if(ailmentStackingMode == AilmentStackingMode.NO_STACKING_REFRESH_DURATION) {
-                this.stacks.getLast().durationTicks = ModUtils.getDurationInTicks(this.effect, damage, defender, livingAttacker);
-            }
-            else if(replacementMode == StackEntry.ReplacementMode.OLDEST) {
-                StackEntry oldestStack =  this.stacks.removeFirst();
+            if(replacementMode == StackEntry.ReplacementMode.OLDEST) {
+                StackEntry oldestStack = this.stacks.removeFirst();
+                onStackExpire(defender, oldestStack);
+
                 totalDamage -= oldestStack.damage;
                 totalEffectStrength -= oldestStack.effectStrength;
 
-                //both of these fire only when the removed values were ftom the strongest stack
+
+                //both of these fire only when the removed values were from the strongest stack
                 if (oldestStack.damage == this.strongestDamage)
                     this.strongestDamage = this.stacks.stream().map(s -> s.damage).max(Float::compare).orElse(0f);
 
@@ -171,30 +171,34 @@ public class AilmentInstance {
             }
             else {
                 StackEntry weakestStack = null;
-                if(ailmentStackingMode == AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY) {
+                if(ailmentStackingModes.contains(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY) && !ailmentStackingModes.contains(AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE)) {
                     weakestStack = this.stacks.stream()
                             .min(Comparator.comparing(stack -> stack.effectStrength))
                             .orElse(null);
                 }
-                else if(ailmentStackingMode == AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE) {
+                else if(ailmentStackingModes.contains(AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE) && !ailmentStackingModes.contains(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY)) {
                     weakestStack = this.stacks.stream()
                             .min(Comparator.comparing(stack -> stack.damage))
                             .orElse(null);
                 }
 
                 if(weakestStack != null) {
-                    effect.onStackExpire(defender, this, weakestStack, weakestStack.payload);
+                    onStackExpire(defender, weakestStack);
 
                     this.totalDamage -= weakestStack.damage;
                     this.totalEffectStrength -= weakestStack.effectStrength;
 
                     stacks.remove(weakestStack);
                 }
+                else {
+                    //breaks the loop because the loop will go on forever if nothing is removed when nothing is found when the replacement mode is WEAKEST.
+                    break;
+                }
             }
         }
 
         //now we can add it.
-        if(ailmentStackingMode != AilmentStackingMode.NO_STACKING_REFRESH_DURATION) {
+        if(ailmentStackingModes.contains(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY) || ailmentStackingModes.contains(AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE)) {
             this.stacks.addLast(new StackEntry(dmg, strength, duration, payload));
 
             this.effectStrength = strength;
@@ -205,6 +209,18 @@ public class AilmentInstance {
 
             if(dmg > this.strongestDamage) this.strongestDamage = dmg;
             if(strength > this.strongestEffectStrength) this.strongestEffectStrength = strength;
+        }
+
+        if(ailmentStackingModes.contains(AilmentStackingMode.REFRESH_DURATION)){
+            //we must remember to refresh duration for this mode even when stacks isn't max
+            //use the old damage value to *refresh*, and not the new one.
+            int newDuration = ModUtils.getDurationInTicks(this.effect, this.damage, defender, livingAttacker);
+
+            for(StackEntry stackEntry : this.stacks) {
+                stackEntry.durationTicks = newDuration;
+            }
+
+            refresh(newDuration);
         }
     }
     public void setMaxStacks(int newMaxStacks) {
@@ -226,8 +242,8 @@ public class AilmentInstance {
     public Object onStackApply(LivingEntity livingDefender) {
         return this.effect.onStackApply(livingDefender, this);
     }
-    public void onStackExpire(LivingEntity livingDefender, StackEntry stackEntry, Object payload) {
-        this.effect.onStackExpire(livingDefender, this, stackEntry, payload);
+    public void onStackExpire(LivingEntity livingDefender, StackEntry stackEntry) {
+        this.effect.onStackExpire(livingDefender, this, stackEntry);
     }
 
     public void incrementTickCounter() {

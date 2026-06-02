@@ -6,6 +6,8 @@ import com.anionianonion.elementalattackdamagecompat.ElementalAttackDamageCompat
 import com.anionianonion.elementalattackdamagecompat.ModAttributes;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentDataHelper;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentModifierHelper;
+import com.anionianonion.elementalattackdamagecompat.fire_aspect_modifier.FireAspectHelper;
+import com.anionianonion.elementalattackdamagecompat.fire_aspect_modifier.FireSourceType;
 import com.anionianonion.elementalattackdamagecompat.items.ScorchHelmetItem;
 import com.anionianonion.elementalattackdamagecompat.pseudo_enchants.GemBuffRegistry;
 import com.anionianonion.elementalattackdamagecompat.util.AttributeHelpers;
@@ -18,9 +20,11 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -31,13 +35,18 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraftforge.event.AnvilUpdateEvent;
 import net.minecraftforge.event.GrindstoneEvent;
 import net.minecraftforge.event.ItemAttributeModifierEvent;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.ProjectileImpactEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -45,6 +54,7 @@ import net.minecraftforge.fml.common.Mod;
 
 import java.util.*;
 
+import static com.anionianonion.elementalattackdamagecompat.fire_aspect_modifier.FireAspectHelper.applyFireIgnite;
 import static net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION;
 
 @Mod.EventBusSubscriber(modid = ElementalAttackDamageCompatMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
@@ -204,6 +214,38 @@ public class EventHandler {
         });
     }
 
+    @SubscribeEvent
+    public void onMeleeHit(AttackEntityEvent event) {
+        if (!(event.getTarget() instanceof LivingEntity target)) return;
+
+        LivingEntity attacker = event.getEntity();
+        ItemStack weapon = attacker.getMainHandItem();
+
+        int level = weapon.getEnchantmentLevel(Enchantments.FIRE_ASPECT);
+        if (level > 0) {
+            int duration = 80 + (level - 1) * 40; // vanilla-ish, or your own
+            applyFireIgnite(attacker, target, FireSourceType.ATTACK_MELEE, duration);
+        }
+    }
+
+    @SubscribeEvent
+    public void onProjectileHit(ProjectileImpactEvent event) {
+        if (!(event.getRayTraceResult() instanceof EntityHitResult hit)) return;
+        if (!(hit.getEntity() instanceof LivingEntity target)) return;
+
+        Projectile projectile = event.getProjectile();
+        if (!(projectile instanceof AbstractArrow arrow)) return;
+
+        if (!arrow.isOnFire()) return; // Flame enchant sets this
+
+        Entity owner = arrow.getOwner();
+        if (!(owner instanceof LivingEntity attacker)) return;
+
+        applyFireIgnite(attacker, target, FireSourceType.ATTACK_PROJECTILE, 80);
+    }
+
+
+
 
     //--------------------TICK EVENTS--------------------
     @SubscribeEvent
@@ -255,6 +297,52 @@ public class EventHandler {
             //cap.setReplacement("shock", "oath_of_spring_shock");
         });
     }
+
+    @SubscribeEvent
+    public void setOnFire(LivingEvent.LivingTickEvent event) {
+        LivingEntity target = event.getEntity();
+        CompoundTag tag = target.getPersistentData();
+
+        if (!tag.contains("fa_attacker")) return;
+        if (!target.isOnFire()) return;
+
+        int ticks = tag.getInt("fa_ticks");
+        if (ticks <= 0) {
+            tag.remove("fa_attacker");
+            tag.remove("fa_type");
+            tag.remove("fa_ticks");
+            return;
+        }
+
+        tag.putInt("fa_ticks", ticks - 1);
+
+        // Deal damage once per second
+        if (ticks % 20 != 0) return;
+
+        // Retrieve attacker
+        UUID attackerId = tag.getUUID("fa_attacker");
+        LivingEntity attacker = (LivingEntity) ((ServerLevel)target.level()).getEntity(attackerId);
+        if (attacker == null) return;
+
+        FireSourceType type = FireSourceType.valueOf(tag.getString("fa_type"));
+
+        float dmg = FireAspectHelper.computeFireDamage(attacker, type);
+
+        target.hurt(target.damageSources().magic(), dmg);
+    }
+
+    @SubscribeEvent
+    public void cancelMinecraft1HPFireTickDamage(LivingHurtEvent event) {
+        LivingEntity target = event.getEntity();
+
+        if (
+                //(event.getSource().is(DamageTypes.ON_FIRE) || event.getSource().is(DamageTypes.IN_FIRE)) &&
+                target.getPersistentData().contains("fa_attacker")) {
+            event.setCanceled(true);
+        }
+    }
+
+
 
     //--------------------ITEM EVENTS--------------------
 

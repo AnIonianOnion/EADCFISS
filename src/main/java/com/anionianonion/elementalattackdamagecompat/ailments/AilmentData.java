@@ -18,7 +18,7 @@ public class AilmentData implements IAilmentData {
                            LivingEntity defender) {
 
         String finalAilmentKey = normalize(ailmentKey);
-        var ailmentStackingMode = newInst.effect.getStackingMode();
+        var ailmentStackingModes = newInst.effect.getStackingModes();
 
         //On First Apply
         if(!ailmentsOnEntity.containsKey(finalAilmentKey) && AilmentEffectRegistry.getAllAilments().contains(finalAilmentKey)) {
@@ -32,13 +32,13 @@ public class AilmentData implements IAilmentData {
         Object payload = exInst.onStackApply(defender);
 
         AilmentInstance.StackEntry.ReplacementMode replacementMode = AilmentInstance.StackEntry.ReplacementMode.OLDEST;
-        if(ailmentStackingMode == AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE || ailmentStackingMode == AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY) {
+        if(ailmentStackingModes.contains(AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE) || ailmentStackingModes.contains(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY)) {
             replacementMode = AilmentInstance.StackEntry.ReplacementMode.WEAKEST;
         }
 
         exInst.addStack(defender, livingAttackerOrCaster, newInst.getDamage(),
                 newInst.getEffectStrength(), newInst.getDuration(),
-                replacementMode, ailmentStackingMode, payload);
+                replacementMode, ailmentStackingModes, payload);
 
     }
 

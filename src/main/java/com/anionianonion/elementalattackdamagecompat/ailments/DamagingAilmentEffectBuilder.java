@@ -6,6 +6,8 @@ import com.anionianonion.elementalattackdamagecompat.ailments.higher_order.Ailme
 import com.anionianonion.elementalattackdamagecompat.ailments.higher_order.AilmentTickFunction;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.List;
+
 public class DamagingAilmentEffectBuilder {
 
     private String namespace;
@@ -15,7 +17,7 @@ public class DamagingAilmentEffectBuilder {
     private AilmentTickFunction onTickFunc = (defender, instance) -> {};
     private AilmentApplyFunction onApplyFunc = (defender, instance) -> {};
     private AilmentExpireFunction onExpireFunc = (defender, instance) -> {};
-    private AilmentStackingMode stackingMode = AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE;
+    private List<AilmentStackingMode> stackingMode = List.of(AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE);
     private int maxStacks = 1;
 
     /**
@@ -42,7 +44,7 @@ public class DamagingAilmentEffectBuilder {
         return this;
     }
 
-    public DamagingAilmentEffectBuilder stackingMode(AilmentStackingMode mode) {
+    public DamagingAilmentEffectBuilder stackingMode(List<AilmentStackingMode> mode) {
         this.stackingMode = mode;
         return this;
     }
@@ -96,7 +98,7 @@ public class DamagingAilmentEffectBuilder {
             }
 
             @Override
-            public AilmentStackingMode getStackingMode() {
+            public List<AilmentStackingMode> getStackingModes() {
                 return stackingMode;
             }
 

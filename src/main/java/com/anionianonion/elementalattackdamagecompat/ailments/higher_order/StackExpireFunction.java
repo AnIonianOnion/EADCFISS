@@ -5,6 +5,6 @@ import net.minecraft.world.entity.LivingEntity;
 
 @FunctionalInterface
 public interface StackExpireFunction {
-    void onStackExpire(LivingEntity target, AilmentInstance instance, AilmentInstance.StackEntry stackEntry, Object payload);
+    void onStackExpire(LivingEntity target, AilmentInstance instance, AilmentInstance.StackEntry stackEntry);
 }
 

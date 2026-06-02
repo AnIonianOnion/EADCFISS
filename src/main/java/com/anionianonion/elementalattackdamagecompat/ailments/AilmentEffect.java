@@ -3,6 +3,8 @@ package com.anionianonion.elementalattackdamagecompat.ailments;
 import com.anionianonion.elementalattackdamagecompat.ailments.ailment_effects.EmptyAilmentEffect;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.List;
+
 public interface AilmentEffect {
 
     /**
@@ -29,7 +31,7 @@ public interface AilmentEffect {
     Whenever a stack of an AilmentInstance expires.
      */
     default void onStackExpire(LivingEntity defender, AilmentInstance inst,
-                              AilmentInstance.StackEntry stack, Object payload) {
+                              AilmentInstance.StackEntry stack) {
         // default: do nothing
     }
 
@@ -42,7 +44,7 @@ public interface AilmentEffect {
 
     float getDurationInSeconds(LivingEntity livingAttackerOrCaster);
 
-    AilmentStackingMode getStackingMode();
+    List<AilmentStackingMode> getStackingModes();
 
     default int getDefaultMaxStacks() {
         return 1;

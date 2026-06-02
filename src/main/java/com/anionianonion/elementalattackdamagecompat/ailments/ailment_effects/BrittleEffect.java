@@ -8,6 +8,9 @@ import com.anionianonion.elementalattackdamagecompat.ailments.NonDamagingAilment
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class BrittleEffect extends NonDamagingAilmentEffect {
 
     private static final float BASE_DURATION_IN_SECONDS = 4f;
@@ -18,8 +21,8 @@ public class BrittleEffect extends NonDamagingAilmentEffect {
     }
 
     @Override
-    public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY;
+    public List<AilmentStackingMode> getStackingModes() {
+        return new ArrayList<>(List.of(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY, AilmentStackingMode.REFRESH_DURATION));
     }
 
     @Override

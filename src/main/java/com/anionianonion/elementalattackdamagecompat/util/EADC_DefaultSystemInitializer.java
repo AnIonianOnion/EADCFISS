@@ -86,7 +86,7 @@ public class EADC_DefaultSystemInitializer {
                 .doesVaryEffectDuration(false)
                 .setBaseDurationInSeconds(3)
                 .setEffectStrength(0.5f)
-                .stackingMode(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY)
+                .stackingMode(new ArrayList<>(List.of(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY, AilmentStackingMode.REFRESH_DURATION)))
                 .setMaxStacks(6)
                 .createStackPayload((defender, instance) -> {
                     var attr = defender.getAttribute(Attributes.MAX_HEALTH);
@@ -102,16 +102,22 @@ public class EADC_DefaultSystemInitializer {
                     );
 
                     attr.addPermanentModifier(mod);
+
+                    // in createStackPayload
+                    System.out.println("[VIRAL] APPLY stack, uuid=" + uuid + ", maxHP=" + defender.getMaxHealth());
+
                     return uuid; // payload
                 })
-                .onStackExpire((defender, instance, stack, payload) -> {
-                    if (payload instanceof UUID uuid) {
+                .onStackExpire((defender, instance, stack) -> {
+                    if (stack.payload instanceof UUID uuid) {
                         var attr = defender.getAttribute(Attributes.MAX_HEALTH);
                         if (attr != null) attr.removeModifier(uuid);
 
                         if (defender.getHealth() > defender.getMaxHealth()) {
                             defender.setHealth(defender.getMaxHealth());
                         }
+                        // in onStackExpire
+                        System.out.println("[VIRAL] EXPIRE stack, payload=" + stack.payload + ", maxHP(before)=" + defender.getMaxHealth());
                     }
                 })
                 .build());
@@ -127,7 +133,7 @@ public class EADC_DefaultSystemInitializer {
                         .setEffectStrengthCoefficient(1f)
                         .setMinEffectStrengthToKeep(0.05f)
                         .setBaseDurationInSeconds(40)
-                        .stackingMode(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY)
+                        .stackingMode(new ArrayList<>(List.of(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY, AilmentStackingMode.REFRESH_DURATION)))
                         .setMaxStacks(50)
                         .createStackPayload((defender, instance) -> {
 

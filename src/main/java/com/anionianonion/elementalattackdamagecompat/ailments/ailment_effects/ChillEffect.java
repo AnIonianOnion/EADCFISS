@@ -8,6 +8,9 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ChillEffect extends NonDamagingAilmentEffect {
 
     private static final float BASE_DURATION_IN_SECONDS = 2f;
@@ -24,10 +27,9 @@ public class ChillEffect extends NonDamagingAilmentEffect {
     }
 
     @Override
-    public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY;
+    public List<AilmentStackingMode> getStackingModes() {
+        return new ArrayList<>(List.of(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY, AilmentStackingMode.REFRESH_DURATION));
     }
-
     @Override
     protected boolean usesVaryingEffectDuration() {
         return false;

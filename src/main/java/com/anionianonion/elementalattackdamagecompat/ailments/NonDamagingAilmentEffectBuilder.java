@@ -6,11 +6,13 @@ import com.anionianonion.elementalattackdamagecompat.ModAttributes;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class NonDamagingAilmentEffectBuilder {
 
-    private String namespace;
-    private String id;
-    private String altForId;
+    private String namespace, replacementNamespace;
+    private String id, replacementId;
     private int baseDurationInSeconds;
     private float effectStrength;
     private boolean doesVaryEffectStrength;
@@ -25,8 +27,8 @@ public class NonDamagingAilmentEffectBuilder {
     private AilmentApplyFunction onApplyFunc = (defender, instance) -> {};
     private AilmentExpireFunction onExpireFunc = (defender, instance) -> {};
     private StackPayloadFunction createStackPayloadFunc = (defender, instance) -> null;
-    private StackExpireFunction onStackExpireFunc = (defender, instance, stack, payload) -> {};
-    private AilmentStackingMode stackingMode = AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE;
+    private StackExpireFunction onStackExpireFunc = (defender, instance, stack) -> {};
+    private List<AilmentStackingMode> stackingModes = new ArrayList<>(List.of(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY, AilmentStackingMode.REFRESH_DURATION));
     private int maxStacks = 1;
 
     //----------Basic---------
@@ -37,6 +39,16 @@ public class NonDamagingAilmentEffectBuilder {
 
     public NonDamagingAilmentEffectBuilder setId(String id) {
         this.id = id;
+        return this;
+    }
+
+    public NonDamagingAilmentEffectBuilder setReplacementNamespace(String replacementNamespace) {
+        this.replacementNamespace = replacementNamespace;
+        return this;
+    }
+
+    public NonDamagingAilmentEffectBuilder setReplacementId(String replacementId) {
+        this.replacementId = replacementId;
         return this;
     }
     
@@ -107,8 +119,8 @@ public class NonDamagingAilmentEffectBuilder {
         return this;
     }
 
-    public NonDamagingAilmentEffectBuilder stackingMode(AilmentStackingMode mode) {
-        this.stackingMode = mode;
+    public NonDamagingAilmentEffectBuilder stackingMode(List<AilmentStackingMode> mode) {
+        this.stackingModes = mode;
         return this;
     }
 
@@ -161,8 +173,8 @@ public class NonDamagingAilmentEffectBuilder {
                 }
 
                 @Override
-                public void onStackExpire(LivingEntity defender, AilmentInstance inst, AilmentInstance.StackEntry stack, Object payload) {
-                    onStackExpireFunc.onStackExpire(defender, inst, stack, payload);
+                public void onStackExpire(LivingEntity defender, AilmentInstance inst, AilmentInstance.StackEntry stack) {
+                    onStackExpireFunc.onStackExpire(defender, inst, stack);
                 }
 
                 @Override
@@ -176,8 +188,8 @@ public class NonDamagingAilmentEffectBuilder {
                 }
 
                 @Override
-                public AilmentStackingMode getStackingMode() {
-                    return stackingMode;
+                public List<AilmentStackingMode> getStackingModes() {
+                    return stackingModes;
                 }
 
                 @Override
@@ -208,15 +220,22 @@ public class NonDamagingAilmentEffectBuilder {
                     float base = (float)Math.pow(ratio, 0.4);
                     float maxStrength = getMaxEffectStrength(livingAttackerOrCaster);
 
-                    float effect = effectCoefficient * base * AttributeHelpers.getNonDamagingAilmentEffectMultiplier(livingAttackerOrCaster, id);
+                    String finalId = replacementId != null ? replacementId : id;
+                    float effect = effectCoefficient * base * AttributeHelpers.getNonDamagingAilmentEffectMultiplier(livingAttackerOrCaster, finalId);
                     if(effect < minimumEffectStrengthForKeeping && discardIfBelowMinimumEffectStrength) return 0f;
                     return Mth.clamp(effect, 0, maxStrength);
                 }
 
                 @Override
                 protected float getMaxEffectStrength(LivingEntity livingAttackerOrCaster) {
+                    Float maxEffectStrength;
+                    if(replacementNamespace != null && replacementId != null) {
+                        maxEffectStrength = ModAttributes.getAttributeValue(livingAttackerOrCaster, String.format("%s:max_%s_effect", replacementNamespace, replacementId));
+                    }
+                    else {
+                        maxEffectStrength = ModAttributes.getAttributeValue(livingAttackerOrCaster, String.format("%s:max_%s_effect", namespace, id));
+                    }
 
-                    Float maxEffectStrength = ModAttributes.getAttributeValue(livingAttackerOrCaster, String.format("%s:max_%s_effect", namespace, id));
                     if(maxEffectStrength == null) maxEffectStrength = 0f;
                     return maxEffectStrength;
                 }

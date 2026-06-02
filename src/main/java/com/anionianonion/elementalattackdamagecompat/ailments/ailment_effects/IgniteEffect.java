@@ -8,6 +8,9 @@ import com.anionianonion.elementalattackdamagecompat.ailments.ModDamageSources;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class IgniteEffect extends DamagingAilmentEffect {
 
     private static final float BASE_DURATION_IN_SECONDS = 4f;
@@ -30,8 +33,8 @@ public class IgniteEffect extends DamagingAilmentEffect {
     }
 
     @Override
-    public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE;
+    public List<AilmentStackingMode> getStackingModes() {
+        return new ArrayList<>(List.of(AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE));
     }
 
     @Override

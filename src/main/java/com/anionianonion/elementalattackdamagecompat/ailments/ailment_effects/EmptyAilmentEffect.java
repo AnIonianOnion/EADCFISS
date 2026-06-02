@@ -4,6 +4,9 @@ import com.anionianonion.elementalattackdamagecompat.ailments.AilmentEffect;
 import com.anionianonion.elementalattackdamagecompat.ailments.AilmentStackingMode;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class EmptyAilmentEffect implements AilmentEffect {
 
     public static final EmptyAilmentEffect INSTANCE = new EmptyAilmentEffect();
@@ -16,8 +19,8 @@ public final class EmptyAilmentEffect implements AilmentEffect {
     }
 
     @Override
-    public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE;
+    public List<AilmentStackingMode> getStackingModes() {
+        return new ArrayList<>(List.of(AilmentStackingMode.STACKING_THEN_STRONGEST_DAMAGE, AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY));
     }
 
 }

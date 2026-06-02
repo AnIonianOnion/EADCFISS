@@ -8,6 +8,9 @@ import com.anionianonion.elementalattackdamagecompat.ailments.AilmentStackingMod
 import com.anionianonion.elementalattackdamagecompat.ailments.NonDamagingAilmentEffect;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class SapEffect extends NonDamagingAilmentEffect {
 
     private static final float BASE_DURATION_IN_SECONDS = 4f;
@@ -22,8 +25,8 @@ public class SapEffect extends NonDamagingAilmentEffect {
     }
 
     @Override
-    public AilmentStackingMode getStackingMode() {
-        return AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY;
+    public List<AilmentStackingMode> getStackingModes() {
+        return new ArrayList<>(List.of(AilmentStackingMode.STACKING_THEN_STRONGEST_INTENSITY, AilmentStackingMode.REFRESH_DURATION));
     }
 
     @Override
